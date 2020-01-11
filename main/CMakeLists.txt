@@ -1,8 +1,15 @@
-idf_component_register(SRCS "user_main.c" 
+idf_component_register(SRCS "main.c" 
 					"u8g2_esp32_hal.c"
 					"telem.c"
 					"tracker.c"
 			    		"protocol_detection.c"
+					"m8_programmer.c"
+					"BThelper.c"
+					"tasks/monitoring_task.c"
+					"tasks/tcp_server_task.c"
+					"tasks/oled_task.c"
+					"tasks/uart_task.c"
+					"tasks/send_to_host_task.c"
 
                     INCLUDE_DIRS ".")
 

@@ -49,6 +49,13 @@ typedef enum {
 
 } trackerProtocolFlags_t;
 
+
+typedef enum {BT, WIFI} connection_type;
+typedef enum {B9600, B19200, B38400, B57600, B115200} uart_baudrate;
+typedef enum {NO, AP, STA} wifi_mode;
+typedef enum {TRACKING_V, TRACKING_T, MANUAL, SETUP} tracker_mode;
+
+
 //-------------------------------------------------
 
 // VIDEO TELEMETRY FRAMES //
