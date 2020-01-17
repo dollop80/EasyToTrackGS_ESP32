@@ -35,6 +35,8 @@ static uint8_t gGPS_tmp = 0;
 static uint8_t gGPS_Timeout = 0;
 static uint32_t gGPS_lon_gm = 0;
 
+static bool azimuth360mode;
+
 GPS_PNT gPntStart, gPntCurrent;
 GPS_VEC gVecToStart;
 
@@ -232,8 +234,8 @@ void decode_packet_and_send_to_gs(const char * rx_buffer, int len)
 			if(deck_pack.msg[0] == 0x04 && deck_pack.msg[4] == 0x01) //FROMHOST_MANUAL_AZIMUTH_MSG_ID and force manual mode 
 			{
 				gTracker_m = MANUAL;//manual_tracker_mode = true;
-				to_host_data.Track_azimuth = deck_pack.msg[2] + ((uint16_t)deck_pack.msg[1] << 8);
-				to_host_data.Track_elevation = deck_pack.msg[3];
+				gTelAzimuth/*to_host_data.Track_azimuth*/ = deck_pack.msg[2] + ((uint16_t)deck_pack.msg[1] << 8);
+				gTelElevation/*to_host_data.Track_elevation*/ = deck_pack.msg[3];
 			}
 			else if(deck_pack.msg[0] == 0x04 && deck_pack.msg[4] == 0x00)
 			{
@@ -313,8 +315,8 @@ bool decode_packet_for_host(uint8_t * rx_buffer, int len)
 			{
 				az_elev_data.Track_azimuth =((deck_pack.msg[2]&0xff)<<8)+(deck_pack.msg[1]&0xff);
 				az_elev_data.Track_elevation = (char)(deck_pack.msg[3]&0xff);
-				gTelAzimuth/*to_host_data.Track_azimuth*/ = az_elev_data.Track_azimuth;
-				gTelElevation/*to_host_data.Track_elevation*/ = az_elev_data.Track_elevation;
+				//gTelAzimuth/*to_host_data.Track_azimuth*/ = az_elev_data.Track_azimuth;
+				//gTelElevation/*to_host_data.Track_elevation*/ = az_elev_data.Track_elevation;
 			}
 			
 		}

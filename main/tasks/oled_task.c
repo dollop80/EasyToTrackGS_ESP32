@@ -27,6 +27,9 @@ extern bool gFirstU2byte;
 extern wifi_mode gWifi_m;
 extern tracker_mode gTracker_m;
 
+extern uint16_t gTelAzimuth;
+extern uint8_t gTelElevation;
+
 u8g2_t u8g2; // a structure which will contain all the data for one display
 
 static const char TAG[] = "ETT-OLED";
@@ -52,6 +55,12 @@ void oled_task(void *pvParameter)
 
 		snprintf (buf, 12, "Az:%d", to_host_data.Track_azimuth);
 		u8g2_DrawStr(&u8g2, 90, 10, buf);
+		
+		snprintf (buf, 12, "El:%d", gTelElevation);
+		u8g2_DrawStr(&u8g2, 50, 18, buf);
+
+		snprintf (buf, 12, "Az:%d", gTelAzimuth);
+		u8g2_DrawStr(&u8g2, 90, 18, buf);
 
 		if(gFirstU2byte && !getProtocol())
 		{
