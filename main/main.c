@@ -49,10 +49,13 @@ SOFTWARE.
 #include "esp_spp_api.h"
 
 #include "sdkconfig.h"
+#include "define.h"
 
 #include "components/wifi-manager/src/wifi_manager.h"
+#ifdef DIGITAL_THRH_POT
+	#include "components/tpl0401x/tpl0401x.h"
+#endif
 
-#include "define.h"
 #include "BThelper.h"
 #include "m8_programmer.h"
 #include "tracker.h"
@@ -84,6 +87,8 @@ uint8_t gUpTimeSs = 0;
 bool gFirstU2byte = false;
 uint16_t gTelAzimuth;
 uint8_t gTelElevation;
+uint8_t gVideoStandard;
+uint8_t gVideoThreshold;
 
 wifi_mode gWifi_m = NO;
 tracker_mode gTracker_m = TRACKING_V;
@@ -107,7 +112,19 @@ void app_main()
 	initOled();
 	initSPI();
 	initSPIFS();
+	initVidStdPin();
 	runProgrammer();
+	
+	if(!tracker_fetch_video_config())
+	{
+		gVideoStandard = 0;
+		gVideoThreshold = 64;
+		tracker_save_video_config();
+	}
+	setVidStdPin(gVideoStandard);
+	#ifdef DIGITAL_THRH_POT
+		i2c_tpl0401_set(gVideoThreshold);
+	#endif
 		
 	xTaskCreatePinnedToCore(&oled_task, "oled_task", 2048, NULL, 1, &xHandleOled, 1);
 	

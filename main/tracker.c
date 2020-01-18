@@ -11,11 +11,20 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "driver/uart.h"
+#include "driver/gpio.h"
+
+#include "nvs_flash.h"
+#include "nvs.h"
 
 #include "math.h"
 #include "define.h"
+#include "tracker.h"
 #include "components/protocols/simple_bin.h"
 #include "protocol_detection.h"
+#ifdef DIGITAL_THRH_POT
+	#include "components/tpl0401x/tpl0401x.h"
+#endif
+
 
 void CalcGpsVec(GPS_PNT *src, GPS_PNT *dst, GPS_VEC *v);
 int16_t cos_b(int16_t angle);
@@ -27,6 +36,8 @@ extern AZ_ELEV_DATA az_elev_data;
 extern uint16_t gTelAzimuth;
 extern uint8_t gTelElevation;
 extern tracker_mode gTracker_m;
+extern uint8_t gVideoStandard;
+extern uint8_t gVideoThreshold;
 
 static uint8_t gGPS_starting = 0;
 static uint8_t gGPS_ready = 0;
@@ -39,6 +50,9 @@ static bool azimuth360mode;
 
 GPS_PNT gPntStart, gPntCurrent;
 GPS_VEC gVecToStart;
+
+static const char TAG[] = "ETT-TRCK";
+const char tracker_nvs_namespace[] = "ettsettings";
 
 void calc_los(void)
 {
@@ -261,6 +275,20 @@ void decode_packet_and_send_to_gs(const char * rx_buffer, int len)
 				}
 			}
 			
+			else if(deck_pack.msg[0] == 0x0B)
+			{
+				gVideoStandard = deck_pack.msg[2];
+				gVideoThreshold = deck_pack.msg[3];
+				if(deck_pack.msg[1] == 1) //Save settings
+				{
+					 tracker_save_video_config();
+				}
+				setVidStdPin(gVideoStandard);
+				#ifdef DIGITAL_THRH_POT
+					i2c_tpl0401_set(gVideoThreshold);
+				#endif
+			}
+			
 			
 			if(gTracker_m == MANUAL /*manual_tracker_mode*/)
 			{
@@ -336,4 +364,82 @@ void tracker_task(void *pvParameters)
 		}
 		vTaskDelay(pdMS_TO_TICKS(20));
 	}
+}
+
+
+esp_err_t tracker_save_video_config(){
+
+	nvs_handle handle;
+	esp_err_t esp_err;
+	ESP_LOGI(TAG, "About to save video config to flash");
+
+		esp_err = nvs_open(tracker_nvs_namespace, NVS_READWRITE, &handle);
+		if (esp_err != ESP_OK) return esp_err;
+
+		esp_err = nvs_set_u8(handle, "vid_std", gVideoStandard);
+		if (esp_err != ESP_OK) return esp_err;
+
+		esp_err = nvs_set_u8(handle, "vid_thr", gVideoThreshold);
+		if (esp_err != ESP_OK) return esp_err;
+
+		esp_err = nvs_commit(handle);
+		if (esp_err != ESP_OK) return esp_err;
+
+		nvs_close(handle);
+
+		ESP_LOGD(TAG, "eet_vid_config written: vid_std:%d vid_thr:%d",gVideoStandard,gVideoThreshold);
+
+	return ESP_OK;
+}
+
+
+bool tracker_fetch_video_config(){
+
+	nvs_handle handle;
+	esp_err_t esp_err;
+	if(nvs_open(tracker_nvs_namespace, NVS_READONLY, &handle) == ESP_OK){
+
+
+		esp_err = nvs_get_u8(handle, "vid_std", &gVideoStandard);
+		if(esp_err != ESP_OK)
+			return false;
+		
+		esp_err = nvs_get_u8(handle, "vid_thr", &gVideoThreshold);
+		if(esp_err != ESP_OK)
+			return false;
+
+		nvs_close(handle);
+
+		ESP_LOGI(TAG, "eet_vid_config fetched: vid_std:%d vid_thr:%d",gVideoStandard,gVideoThreshold);
+
+		return (gVideoStandard < 2) && (gVideoThreshold > 0) && (gVideoThreshold < 128);
+	}
+	else{
+		return false;
+	}
+}
+
+void initVidStdPin()
+{
+	gpio_config_t io_conf;
+    //disable interrupt
+    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+    //set as output mode
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    //bit mask of the pins that you want to set,e.g.GPIO18/19
+    io_conf.pin_bit_mask = GPIO_VID_STD_PIN_SEL;
+    //disable pull-down mode
+    io_conf.pull_down_en = 0;
+    //disable pull-up mode
+    io_conf.pull_up_en = 0;
+    //configure GPIO with the given settings
+    gpio_config(&io_conf);
+}
+
+void setVidStdPin(uint8_t std)
+{
+	if(std == 0)
+		gpio_set_level(PIN_NUM_VID_STD, 1);
+	else
+		gpio_set_level(PIN_NUM_VID_STD, 0);
 }

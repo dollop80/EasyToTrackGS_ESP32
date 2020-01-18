@@ -7,13 +7,9 @@
 
 #define VERSION 20
 
-
-#define LED1_ON 
-#define LED1_OFF 
-#define LED2_ON 
-#define LED2_OFF
-#define KEY1 
-#define KEY2 
+#define PIN_NUM_VID_STD  15
+#define GPIO_VID_STD_PIN_SEL (1ULL<<PIN_NUM_VID_STD)
+#define DIGITAL_THRH_POT
 //--------------------------------------
 
 #define GRAD_METER_CONST 1139
@@ -182,6 +178,15 @@ typedef struct
     uint16_t  max;
     uint16_t  min;
 }  __attribute__ ((packed)) RSSI_DATA;  // 6 bytes
+
+// VIDEO SETUP STRUCT
+typedef struct
+{
+    uint8_t ID;
+    uint8_t save;
+    uint8_t standard;
+    uint8_t threshold;
+}  __attribute__ ((packed)) VIDEO_DATA;  // 4 bytes
 
 // TO GS EXTERNAL HOME DATA STRUCT
 typedef struct

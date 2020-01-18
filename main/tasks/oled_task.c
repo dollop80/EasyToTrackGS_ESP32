@@ -26,6 +26,8 @@ extern int16_t gWFsock;
 extern bool gFirstU2byte;
 extern wifi_mode gWifi_m;
 extern tracker_mode gTracker_m;
+extern uint8_t gVideoStandard;
+extern uint8_t gVideoThreshold;
 
 extern uint16_t gTelAzimuth;
 extern uint8_t gTelElevation;
@@ -56,10 +58,11 @@ void oled_task(void *pvParameter)
 		snprintf (buf, 12, "Az:%d", to_host_data.Track_azimuth);
 		u8g2_DrawStr(&u8g2, 90, 10, buf);
 		
-		snprintf (buf, 12, "El:%d", gTelElevation);
+
+		snprintf (buf, 12, "vs:%d", gVideoStandard);
 		u8g2_DrawStr(&u8g2, 50, 18, buf);
 
-		snprintf (buf, 12, "Az:%d", gTelAzimuth);
+		snprintf (buf, 12, "vt:%d", gVideoThreshold);
 		u8g2_DrawStr(&u8g2, 90, 18, buf);
 
 		if(gFirstU2byte && !getProtocol())
