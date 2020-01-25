@@ -113,7 +113,14 @@ void app_main()
 	initSPI();
 	initSPIFS();
 	initVidStdPin();
-	runProgrammer();
+	initProgModePin();
+	if(getProgModePin())
+	{
+		oledShowProgramming(3);
+		uint8_t p_res = runProgrammer();
+		oledShowProgramming(p_res);
+		while(true);
+	}
 	
 	if(!tracker_fetch_video_config())
 	{

@@ -25,10 +25,14 @@ esp_err_t i2c_tpl0401_init(void)
 esp_err_t i2c_tpl0401_set(uint8_t val)
 {
     int ret;
+	if(val == 0)val = 1;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, TPL0401X_SENSOR_ADDR << 1 | WRITE_BIT, ACK_CHECK_EN);
+	i2c_master_write_byte(cmd, 0x00, ACK_CHECK_EN);
     i2c_master_write_byte(cmd, val, ACK_CHECK_EN);
+	//i2c_master_write_byte(cmd, val, ACK_CHECK_EN);
+	//i2c_master_write_byte(cmd, val, ACK_CHECK_EN);
     i2c_master_stop(cmd);
     ret = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);

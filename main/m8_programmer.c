@@ -33,7 +33,7 @@ void initSPI()
         .max_transfer_sz=4
     };
     spi_device_interface_config_t devcfg={
-        .clock_speed_hz=1*1000*100,           //Clock out at 10 MHz
+        .clock_speed_hz=1*1000*500,           //Clock out at 10 MHz
         .mode=0,                                //SPI mode 0
         .spics_io_num=PIN_NUM_CS,               //CS pin
         .queue_size=7,                          //We want to be able to queue 7 transactions at a time
@@ -83,10 +83,10 @@ void initSPIFS()
     }
 }
 
-void runProgrammer()
+uint8_t runProgrammer()
 {
 	ESP_LOGI(TAG, "Starting Programmer");
-	
+	uint8_t ret = 0;
 	target_poweron(spi);
 	
 	foundSig = getSignature (spi);
@@ -98,7 +98,7 @@ void runProgrammer()
 	  if (foundSig == -1)
 		{
 			stopProgramming (spi);
-			return;
+			return ret;
 		}  // end of no signature	
 	
 	// verify that MCU flash is up to date
@@ -106,16 +106,21 @@ void runProgrammer()
 	{
       printf("\n\rStarting MCU flash update process\n\r");
 	  bool ok = writeFlashContents (spi, name);
-	  if(ok)
+	  if(ok){
 		ESP_LOGI(TAG, "DONE!!!!!");
-	  else
+		ret = 1;
+	  } else {
 		ESP_LOGI(TAG, "FAILED!!!!!"); 
+		ret = 0;
+	  }
 	}
 	else
 	{
+		ret = 2;
 		printf("\n\rMCU flash is up to date\n\r");
 	}
 	stopProgramming (spi);
 
 	gpio_set_level(PIN_NUM_RST, 1);  
+	return ret;
 }

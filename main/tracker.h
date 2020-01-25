@@ -12,3 +12,5 @@ esp_err_t tracker_save_video_config(void);
 bool tracker_fetch_video_config(void);
 void initVidStdPin(void);
 void setVidStdPin(uint8_t std);
+void initProgModePin(void);
+bool getProgModePin(void);

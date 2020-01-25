@@ -2,7 +2,8 @@
 #define SPP_SERVER_NAME "SPP_SERVER"
 #define SPP_SHOW_DATA 0
 #define SPP_SHOW_SPEED 1
-#define SPP_SHOW_MODE SPP_SHOW_SPEED    /*Choose show mode: show data or speed*/
+#define SPP_SHOW_NOTHING 2
+#define SPP_SHOW_MODE SPP_SHOW_NOTHING    /*Choose show mode: show data, speed or nothing*/
 
 
 #define BT_DEV_NAME_PREFIX CONFIG_DEV_NAME_PREFIX
@@ -12,7 +13,6 @@
 #define BT_LED_DISCONNECTED 1
 
 #define SPP_BUFF_SZ 128
-//static uint8_t spp_buff[SPP_BUFF_SZ];
 
 void initBT(void);
 void bt_set_device_name(void);

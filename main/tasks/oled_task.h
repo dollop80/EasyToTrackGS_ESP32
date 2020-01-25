@@ -8,3 +8,4 @@
 
 void oled_task(void *pvParameter);
 void initOled(void);
+void oledShowProgramming(uint8_t done);

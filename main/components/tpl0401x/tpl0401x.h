@@ -6,7 +6,7 @@
 #include "driver/spi_master.h"
 #include "driver/i2c.h"
 
-#define TPL0401X_SENSOR_ADDR 0x5C //or 0x7D
+#define TPL0401X_SENSOR_ADDR 0x2E //or 0x7D
 
 #define WRITE_BIT I2C_MASTER_WRITE              /*!< I2C master write */
 #define READ_BIT I2C_MASTER_READ                /*!< I2C master read */

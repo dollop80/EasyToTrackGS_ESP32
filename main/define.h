@@ -9,6 +9,8 @@
 
 #define PIN_NUM_VID_STD  15
 #define GPIO_VID_STD_PIN_SEL (1ULL<<PIN_NUM_VID_STD)
+#define PIN_PROG_MODE  13
+#define GPIO_PROG_MODE_SEL (1ULL<<PIN_PROG_MODE)
 #define DIGITAL_THRH_POT
 //--------------------------------------
 

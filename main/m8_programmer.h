@@ -1,4 +1,4 @@
 
 void initSPI(void);
 void initSPIFS(void);
-void runProgrammer(void);
+uint8_t runProgrammer(void);

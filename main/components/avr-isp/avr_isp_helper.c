@@ -96,12 +96,13 @@ uint8_t fuses [5];
 
     // Normal fuses, written after writing to flash (but before
     // verifying). Fuses set to zero are untouched.
-uint8_t wfuses[4]  =  {0xFF, 0xDD, 0xF8, 0x0F}; // {low, high, extended, lock}
+//uint8_t wfuses[4]  =  {0xFF, 0xDD, 0xF8, 0x0F}; // {low, high, extended, lock}
+uint8_t wfuses[4]  =  {0x3E, 0xC2, 0x00, 0x00}; // {low, high, extended, lock}
     // Fuse verify mask. Any bits set to zero in these values are
     // ignored while verifying the fuses after writing them. All (and
     // only) bits that are unused for this atmega chip should be zero
     // here.
-uint8_t fuse_mask[4]  =  {0xFF, 0xFF, 0xFF, 0x3F}; // {low, high, extended, lock}
+uint8_t fuse_mask[4]  =  {0xFF, 0xFF, 0x00, 0x00}; // {low, high, extended, lock}
 
 
 // copy of current signature entry for matching processor
@@ -130,18 +131,24 @@ bool programFuses (spi_device_handle_t spi, uint8_t *fuses)
 {
     
   uint8_t f;
+  esp_err_t ret;
   printf("\nSetting fuses ");
+  
+  //We work with fuses on low SPI speed
+  ret=spi_bus_remove_device(spi);
+  ESP_ERROR_CHECK(ret);
+  
+  spi_device_interface_config_t devcfg={
+	.clock_speed_hz=1*1000*10,           //Clock out at 10 MHz
+	.mode=0,                                //SPI mode 0
+	.spics_io_num=PIN_NUM_CS,               //CS pin
+	.queue_size=7,                          //We want to be able to queue 7 transactions at a time
+    };
+	
+	//Attach the programmer to the SPI bus
+	ret=spi_bus_add_device(HSPI_HOST, &devcfg, &spi);
+	ESP_ERROR_CHECK(ret);
 
-  busyWait(spi);
-  f = (fuses[FUSE_PROT]);
-  if (f) {
-    printf("\n\rSet Lock Fuse to: ");
-    printf("0x%02X",f);
-    printf(" -> ");
-    //SPI.beginTransaction(fuses_spisettings);
-    printf("0x%02X ",spi_transaction(spi, 0xAC, 0xE0, 0x00, f));
-    //SPI.endTransaction();
-  }
   busyWait(spi);
   f = (fuses[FUSE_LOW]);
   if (f) {
@@ -173,7 +180,28 @@ bool programFuses (spi_device_handle_t spi, uint8_t *fuses)
     //SPI.endTransaction();
   }
   busyWait(spi);
+  f = (fuses[FUSE_PROT]);
+  if (f) {
+    printf("\n\rSet Lock Fuse to: ");
+    printf("0x%02X",f);
+    printf(" -> ");
+    //SPI.beginTransaction(fuses_spisettings);
+    printf("0x%02X ",spi_transaction(spi, 0xAC, 0xE0, 0x00, f));
+    //SPI.endTransaction();
+  }
+  busyWait(spi);
   printf("\r\n");
+  
+  //Switch back to normal SPI speed
+  ret=spi_bus_remove_device(spi);
+  ESP_ERROR_CHECK(ret);
+  
+  devcfg.clock_speed_hz=1*1000*500;
+
+	
+	//Attach the programmer to the SPI bus
+	ret=spi_bus_add_device(HSPI_HOST, &devcfg, &spi);
+	ESP_ERROR_CHECK(ret);
     
   return true;			/* */
 }
@@ -489,7 +517,7 @@ void clearPage (spi_device_handle_t spi)
 // commit page to flash memory
 void commitPage (spi_device_handle_t spi, uint32_t addr)
   {
-  printf("commiting page %d\n\r", addr);
+  //printf("commiting page %d\n\r", addr);
 	  
   addr >>= 1;  // turn into word address
   
@@ -516,15 +544,16 @@ void verifyData (spi_device_handle_t spi, const uint32_t addr, const uint8_t * p
     uint32_t thisPage = (addr + i) & pagemask;
     // page changed? show progress
     if (thisPage != oldPage && oldPage != NO_PAGE){
-		printf("PAGE CHANGED TO: %d\n\r", thisPage);
+		//printf("PAGE CHANGED TO: %d\n\r", thisPage);
+		printf(".");
 	}
     // now this is the current page
     oldPage = thisPage;
 	
     uint8_t found = readFlash (spi, addr + i);
     uint8_t expected = pData [i];
-	if(i%8==0)
-		printf("\r\n");
+	//if(i%8==0)
+	//	printf("\r\n");
 	
     if (found != expected)
 	{
@@ -533,7 +562,7 @@ void verifyData (spi_device_handle_t spi, const uint32_t addr, const uint8_t * p
 	}
 	else
 	{
-		printf("%02X==%02X ", expected, found);
+		//printf("%02X==%02X ", expected, found);
 	}
 
     }  // end of for
@@ -551,7 +580,8 @@ void writeData (spi_device_handle_t spi, const uint32_t addr, const uint8_t * pD
     // page changed? commit old one
     if (thisPage != oldPage && oldPage != NO_PAGE){
       commitPage (spi, oldPage);
-      printf("PAGE CHANGED TO: %d\n\r", thisPage);
+      //printf("PAGE CHANGED TO: %d\n\r", thisPage);
+	  printf(".");
 	}
     // now this is the current page
     oldPage = thisPage;
@@ -625,7 +655,7 @@ void getFuseBytes (spi_device_handle_t spi, uint8_t * f)
     if (lineCount++ % 40 == 0)
       showProgress ();
     
-  printf("%s\n\r", pLine);
+  //printf("%s\n\r", pLine);
   // convert entire line from ASCII into binary
   while (count)
     {
@@ -699,15 +729,15 @@ void getFuseBytes (spi_device_handle_t spi, uint8_t * f)
           
         case verifyFlash:
           verifyData (spi, addr + extendedAddress, &hexBuffer [4], len);
-		  printf("\n\rverified in adress 0x%02X, len=%d, total=%d\n\r", addr + extendedAddress, len, bytesWritten);
+		  //printf("\n\rverified in adress 0x%02X, len=%d, total=%d\n\r", addr + extendedAddress, len, bytesWritten);
           break;
         
         case writeToFlash:
           writeData (spi, addr + extendedAddress, &hexBuffer [4], len);
-		  printf("\n\rwritten to address 0x%02X, len=%d, total=%d\n\r", addr + extendedAddress, len, bytesWritten);
+		  //printf("\n\rwritten to address 0x%02X, len=%d, total=%d\n\r", addr + extendedAddress, len, bytesWritten);
 		  for (int j=0; j<len; j++)
 		  {
-			 printf("0x%02X ", hexBuffer[4+j]);
+			 //printf("0x%02X ", hexBuffer[4+j]);
 		  }
 		  
           break;      
@@ -762,11 +792,11 @@ bool readHexFile (spi_device_handle_t spi, const char * fName, const uint8_t act
         return true;
     }
 
-  pagesize = currentSignature.pageSize;
-  pagemask = (~(pagesize - 1))>>1;
+  pagesize = 64;//currentSignature.pageSize;
+  pagemask = (~(pagesize - 1));//>>1;
   oldPage = NO_PAGE;
   
-  printf("PAGE MASK = 0x%02X \n\r", pagemask);
+  printf("PAGE MASK = 0x%02X PAGE SIZE = %d\n\r", pagemask, pagesize);
 
   switch (action)
     {
@@ -851,7 +881,7 @@ bool target_poweron (spi_device_handle_t spi)
 
 
  bool start_pmode (spi_device_handle_t spi) { 
-	printf("...spi_transaction");
+	//printf("...spi_transaction");
 	portDISABLE_INTERRUPTS(); 
 	gpio_set_level(PIN_NUM_CLK, 0);
 
