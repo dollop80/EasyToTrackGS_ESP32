@@ -59,6 +59,7 @@ SOFTWARE.
 #include "BThelper.h"
 #include "m8_programmer.h"
 #include "tracker.h"
+#include "protocol_detection.h"
 #include "tasks/monitoring_task.h"
 #include "tasks/tcp_server_task.h"
 #include "tasks/oled_task.h"
@@ -89,6 +90,8 @@ uint16_t gTelAzimuth;
 uint8_t gTelElevation;
 uint8_t gVideoStandard;
 uint8_t gVideoThreshold;
+uint8_t gExtTelemType;
+uint8_t gExtTelemBaud;
 
 wifi_mode gWifi_m = NO;
 tracker_mode gTracker_m = TRACKING_V;
@@ -106,12 +109,13 @@ void app_main()
     }
     ESP_ERROR_CHECK( ret );
 	
-	initUart();
+	
 	initBT();
     initWiFi();
 	initOled();
 	initSPI();
 	initSPIFS();
+	initADC();
 	initVidStdPin();
 	initProgModePin();
 	if(getProgModePin())
@@ -132,6 +136,17 @@ void app_main()
 	#ifdef DIGITAL_THRH_POT
 		i2c_tpl0401_set(gVideoThreshold);
 	#endif
+	
+	if(!tracker_fetch_ext_telemetry_config())
+	{
+		gExtTelemType = 0; //Auto
+		gExtTelemBaud = 4; //57600
+		tracker_save_ext_telemetry_config();
+	}
+	if(gExtTelemType != 0)
+		setProtocol(1 << (gExtTelemType+1));
+	
+	initUart(gExtTelemBaud);
 		
 	xTaskCreatePinnedToCore(&oled_task, "oled_task", 2048, NULL, 1, &xHandleOled, 1);
 	

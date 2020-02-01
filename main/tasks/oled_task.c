@@ -14,6 +14,7 @@
 #include "../u8g2_esp32_hal.h"
 #include "components/u8g2/csrc/u8g2.h"
 #include "../protocol_detection.h"
+#include "../tracker.h"
 #include "oled_task.h"
 
 extern TaskHandle_t xHandleOled;
@@ -108,6 +109,8 @@ void oled_task(void *pvParameter)
 				}			
 			}
 			
+			snprintf (buf, 16, "%.1fV", getVoltage()/(4700.0/(4700.0+47000.0))/1000.0);
+			u8g2_DrawStr(&u8g2, 90, 44, buf);
 
 			/*
 			u8g2_DrawBox(&u8g2, 0, 26, tmp,6);

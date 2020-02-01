@@ -53,8 +53,35 @@ uint16_t urxlen;
 
 static const char TAG[] = "ETT-UART";
 
-void initUart()
+void initUart(uint8_t baud)
 {
+	int baudrate = 9600;
+	switch (baud)
+	{
+		case 1:
+		baudrate = 9600;
+		break;
+		
+		case 2:
+		baudrate = 19200;
+		break;
+
+		case 3:
+		baudrate = 38400;
+		break;
+
+		case 4:
+		baudrate = 57600;
+		break;
+
+		case 5:
+		baudrate = 115200;
+		break;
+		
+		default:
+		baudrate = 57600;
+		break;
+	}
 		
     //Configure UART1
     uart_config_t uart1_config = {
@@ -71,7 +98,7 @@ void initUart()
 	
     //Configure UART2
     uart_config_t uart2_config = {
-        .baud_rate = 57600,
+        .baud_rate = baudrate,
         .data_bits = UART_DATA_8_BITS,
         .parity    = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,

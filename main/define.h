@@ -42,8 +42,8 @@ typedef enum {
 	TP_FRSKY_X 			= (1 << 7),
 	TP_LTM				= (1 << 8),
 	TP_PITLAB			= (1 << 9),
-	TP_MSP				= (1 << 11),
-	TP_MSV				= (1 << 12),
+	TP_MSP				= (1 << 10),
+	TP_MSV				= (1 << 11),
 
 } trackerProtocolFlags_t;
 

@@ -12,6 +12,19 @@
 #include "esp_log.h"
 #include "driver/uart.h"
 #include "driver/gpio.h"
+#include "driver/adc.h"
+#include "esp_adc_cal.h"
+
+#include "esp_bt.h"
+#include "esp_bt_main.h"
+#include "esp_gap_bt_api.h"
+#include "esp_bt_device.h"
+#include "esp_spp_api.h"
+
+#include "lwip/err.h"
+#include "lwip/sockets.h"
+#include "lwip/sys.h"
+#include "lwip/netdb.h"
 
 #include "nvs_flash.h"
 #include "nvs.h"
@@ -24,6 +37,9 @@
 #ifdef DIGITAL_THRH_POT
 	#include "components/tpl0401x/tpl0401x.h"
 #endif
+
+#define DEFAULT_VREF    1100        //Use adc2_vref_to_gpio() to obtain a better estimate
+#define NO_OF_SAMPLES   64          //Multisampling
 
 
 void CalcGpsVec(GPS_PNT *src, GPS_PNT *dst, GPS_VEC *v);
@@ -38,6 +54,11 @@ extern uint8_t gTelElevation;
 extern tracker_mode gTracker_m;
 extern uint8_t gVideoStandard;
 extern uint8_t gVideoThreshold;
+extern uint8_t gExtTelemType;
+extern uint8_t gExtTelemBaud;
+
+extern int16_t gBThandle;
+extern int16_t gWFsock;
 
 static uint8_t gGPS_starting = 0;
 static uint8_t gGPS_ready = 0;
@@ -46,13 +67,35 @@ static uint8_t gGPS_tmp = 0;
 static uint8_t gGPS_Timeout = 0;
 static uint32_t gGPS_lon_gm = 0;
 
-static bool azimuth360mode;
+static esp_adc_cal_characteristics_t *adc_chars;
+static const adc_channel_t channel = ADC1_CHANNEL_6;    //GPIO34 //GPIO34 if ADC1, GPIO14 if ADC2
+static const adc_atten_t atten = ADC_ATTEN_DB_6;
+static const adc_unit_t unit = ADC_UNIT_1;
+uint32_t adc_reading = 0;
+uint32_t voltage = 0;
 
 GPS_PNT gPntStart, gPntCurrent;
 GPS_VEC gVecToStart;
 
 static const char TAG[] = "ETT-TRCK";
 const char tracker_nvs_namespace[] = "ettsettings";
+
+static void check_efuse(void)
+{
+    //Check TP is burned into eFuse
+    if (esp_adc_cal_check_efuse(ESP_ADC_CAL_VAL_EFUSE_TP) == ESP_OK) {
+        printf("eFuse Two Point: Supported\n");
+    } else {
+        printf("eFuse Two Point: NOT supported\n");
+    }
+
+    //Check Vref is burned into eFuse
+    if (esp_adc_cal_check_efuse(ESP_ADC_CAL_VAL_EFUSE_VREF) == ESP_OK) {
+        printf("eFuse Vref: Supported\n");
+    } else {
+        printf("eFuse Vref: NOT supported\n");
+    }
+}
 
 void calc_los(void)
 {
@@ -213,6 +256,33 @@ void sendHostHomeMessageToGS()
 		uart_write_bytes(UART_NUM_1, (const char *) bufftosend, len);
 }
 
+
+void sendExtTelemetrySetMessageToHOST()
+{
+	    uint8_t encodedbuff[11];
+        uint8_t bufftosend[11+6];
+		uint8_t cnt = 2;
+        uint8_t type = 0x0C; //EXT_TELEM_SETTINGS_ID
+							
+	    encodedbuff[0] = gExtTelemType;
+        encodedbuff[1] = gExtTelemBaud;
+		
+		uint8_t len = packPacket(type, bufftosend, encodedbuff, cnt);		
+			if(gBThandle > 0)
+			{
+				esp_spp_write(gBThandle, len, bufftosend);
+				//ESP_LOGI(TAG, "written");
+			} 
+			else if (gWFsock != -1)
+			{
+				int res = send(gWFsock, bufftosend, len, 0);
+				if (res < 0) {
+					//ESP_LOGE(TAG, "Error sending SOCK: errno %d", errno);
+					//break;
+				}		
+			}
+}
+
 /*
 static void sendAzimuthManualPacketToSocket(bool mode)
 {
@@ -274,8 +344,8 @@ void decode_packet_and_send_to_gs(const char * rx_buffer, int len)
 						gTracker_m = TRACKING_T;		 
 				}
 			}
-			
-			else if(deck_pack.msg[0] == 0x0B)
+			 
+			else if(deck_pack.msg[0] == 0x0B) //VIDEO_SETTINGS_ID
 			{
 				gVideoStandard = deck_pack.msg[2];
 				gVideoThreshold = deck_pack.msg[3];
@@ -289,6 +359,29 @@ void decode_packet_and_send_to_gs(const char * rx_buffer, int len)
 				#endif
 			}
 			
+			else if(deck_pack.msg[0] == 0x0C) //EXT_TELEM_SETTINGS_ID
+			{
+				if(deck_pack.msg[1] == 1) //Save settings
+				{
+					if(deck_pack.msg[2] > 0)
+						setProtocol(1 << (deck_pack.msg[2]+1));
+					else
+						enableProtocolDetection();
+					
+					//if(deck_pack.msg[3] > 0) //Add code for baud detection
+					//else
+						
+					gExtTelemType = deck_pack.msg[2];
+					gExtTelemBaud = deck_pack.msg[3];
+					
+					tracker_save_ext_telemetry_config();
+				}
+				else
+				{
+					sendExtTelemetrySetMessageToHOST();
+				}
+			}
+			
 			
 			if(gTracker_m == MANUAL /*manual_tracker_mode*/)
 			{
@@ -298,8 +391,6 @@ void decode_packet_and_send_to_gs(const char * rx_buffer, int len)
 					to_host_data.Track_elevation = deck_pack.msg[3];					
 				}
 			}
-			
-
 		}
 	}
 	
@@ -334,7 +425,7 @@ bool decode_packet_for_host(uint8_t * rx_buffer, int len)
 				
 				to_host_data.GS_Version = deck_pack.msg[44];
 				
-				if(deck_pack.msg[41] < 60 && !getProtocol()) //Video telemetry error count
+				if(deck_pack.msg[41] < 64 && !getProtocol()) //Video telemetry error count
 					setProtocol(TP_MSV);
 				return true;
 			}
@@ -362,6 +453,17 @@ void tracker_task(void *pvParameters)
 			gTelAzimuth = CalcTrackAzimut();
 			gTelElevation = CalcTrackElevation();
 		}
+		
+		//read voltage
+		if (unit == ADC_UNIT_1) {
+			adc_reading = adc1_get_raw((adc1_channel_t)channel);
+		} else {
+			int raw;
+			adc2_get_raw((adc2_channel_t)channel, ADC_WIDTH_BIT_12, &raw);
+			adc_reading = raw;
+		}
+		voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
+			
 		vTaskDelay(pdMS_TO_TICKS(20));
 	}
 }
@@ -419,6 +521,58 @@ bool tracker_fetch_video_config(){
 	}
 }
 
+esp_err_t tracker_save_ext_telemetry_config(){
+
+	nvs_handle handle;
+	esp_err_t esp_err;
+	ESP_LOGI(TAG, "About to save external telemerty config to flash");
+
+		esp_err = nvs_open(tracker_nvs_namespace, NVS_READWRITE, &handle);
+		if (esp_err != ESP_OK) return esp_err;
+
+		esp_err = nvs_set_u8(handle, "ext_telem_type", gExtTelemType);
+		if (esp_err != ESP_OK) return esp_err;
+
+		esp_err = nvs_set_u8(handle, "ext_telem_baud", gExtTelemBaud);
+		if (esp_err != ESP_OK) return esp_err;
+
+		esp_err = nvs_commit(handle);
+		if (esp_err != ESP_OK) return esp_err;
+
+		nvs_close(handle);
+
+		ESP_LOGD(TAG, "eet_ext_telem_config written: type:%d baud:%d",gExtTelemType,gExtTelemBaud);
+
+	return ESP_OK;
+}
+
+
+bool tracker_fetch_ext_telemetry_config(){
+
+	nvs_handle handle;
+	esp_err_t esp_err;
+	if(nvs_open(tracker_nvs_namespace, NVS_READONLY, &handle) == ESP_OK){
+
+
+		esp_err = nvs_get_u8(handle, "ext_telem_type", &gExtTelemType);
+		if(esp_err != ESP_OK)
+			return false;
+		
+		esp_err = nvs_get_u8(handle, "ext_telem_baud", &gExtTelemBaud);
+		if(esp_err != ESP_OK)
+			return false;
+
+		nvs_close(handle);
+
+		ESP_LOGI(TAG, "eet_ext_telem_config fetched: vtype:%d baud:%d",gExtTelemType,gExtTelemBaud);
+
+		return ((gExtTelemType < 12) && (gExtTelemBaud < 6));
+	}
+	else{
+		return false;
+	}
+}
+
 void initVidStdPin()
 {
 	gpio_config_t io_conf;
@@ -463,4 +617,26 @@ void initProgModePin()
 bool getProgModePin(void)
 {
 	return !gpio_get_level(PIN_PROG_MODE);
+}
+
+void initADC()
+{
+	check_efuse();
+
+    //Configure ADC
+    if (unit == ADC_UNIT_1) {
+        adc1_config_width(ADC_WIDTH_BIT_12);
+        adc1_config_channel_atten(channel, atten);
+    } else {
+        adc2_config_channel_atten((adc2_channel_t)channel, atten);
+    }
+
+    //Characterize ADC
+    adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
+   /* esp_adc_cal_value_t val_type =*/ esp_adc_cal_characterize(unit, atten, ADC_WIDTH_BIT_12, DEFAULT_VREF, adc_chars);
+}
+
+float getVoltage()
+{
+	return (float)voltage;
 }
