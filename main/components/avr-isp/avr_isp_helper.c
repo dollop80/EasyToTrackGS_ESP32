@@ -121,7 +121,12 @@ uint8_t lastAddressMSB = 0;
 uint32_t pagesize;
 uint32_t pagemask;
 uint32_t oldPage;
+int lineNumber = 0;
 
+int getLineNumber()
+{
+	return lineNumber;
+}
 
 /*
  * programmingFuses
@@ -196,7 +201,7 @@ bool programFuses (spi_device_handle_t spi, uint8_t *fuses)
   ret=spi_bus_remove_device(spi);
   ESP_ERROR_CHECK(ret);
   
-  devcfg.clock_speed_hz=1*1000*500;
+  devcfg.clock_speed_hz=1*1000*200;
 
 	
 	//Attach the programmer to the SPI bus
@@ -775,8 +780,8 @@ bool readHexFile (spi_device_handle_t spi, const char * fName, const uint8_t act
   {
   const int maxLine = 80;
   char buffer[maxLine];
-  int lineNumber = 0;
-    gotEndOfFile = false;
+  
+  gotEndOfFile = false;
   extendedAddress = 0;
   errors = 0;
   lowestAddress = 0xFFFFFFFF;
@@ -919,6 +924,10 @@ void updateFuses(spi_device_handle_t spi, uint8_t *fuses, uint8_t *fusemask)
 bool writeFlashContents (spi_device_handle_t spi, const char * name)
 {
 	errors = 0;
+	
+	// now fix up fuses so we can boot    
+	//if (errors == 0)
+		updateFuses (spi, wfuses, fuse_mask);
 
 	//if (chooseInputFile ())
 	//  return false;  
@@ -935,9 +944,7 @@ bool writeFlashContents (spi_device_handle_t spi, const char * name)
 	if (readHexFile(spi, name, verifyFlash))
 		return false;
 
-	// now fix up fuses so we can boot    
-	if (errors == 0)
-		updateFuses (spi, wfuses, fuse_mask);
+
 
 	return errors == 0;
 }  // end of writeFlashContents

@@ -119,6 +119,7 @@ void calc_los(void)
 void process_gps(void)
 {
 	uint32_t sl;
+	telem_data.GPS_frame++;
 	if(telem_data.GPS_frame>=3) { telem_data.GPS_frame=0; gGPS_Timeout=0;}
 
 	if(!gGPS_starting && telem_data.GPS_mode==3)

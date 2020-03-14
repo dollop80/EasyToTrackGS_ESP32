@@ -140,5 +140,6 @@ bool readHexFile (spi_device_handle_t spi, const char * fName, const uint8_t act
 void updateFuses(spi_device_handle_t spi, uint8_t *fuses, uint8_t *fusemask);
 bool writeFlashContents (spi_device_handle_t spi, const char * name);
 void stopProgramming(spi_device_handle_t spi);
+int getLineNumber(void);
 
 #endif

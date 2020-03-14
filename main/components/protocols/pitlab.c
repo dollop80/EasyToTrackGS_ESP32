@@ -105,6 +105,8 @@ uint8_t  processPitlabFrame(void){
 	{
 	case 0: // A
 		telem_data.GPS_sats = (uint16_t)Restore_byte(4);
+		if(telem_data.GPS_sats > 5)
+			telem_data.GPS_mode = 3;
 		res = 1;
 		break;
 	case 10: // 10 = K, pos 3 : Absolute altitude, 1 = B, pos 2 : Relative altitude
@@ -114,12 +116,12 @@ uint8_t  processPitlabFrame(void){
 		break;
 	case 2: // C
 		gps_lon = Restore_long(1);
-		to_host_data.GPS_lon = (int32_t)(round(((double)gps_lon * 100.0)/60.0));
+		to_host_data.GPS_lon = (int32_t)(round(((double)gps_lon * 10.0)/60.0));
 		res = 1;
 		break;
 	case 3: // D
 		gps_lat = Restore_long(1);
-		to_host_data.GPS_lat = (int32_t)(round(((double)gps_lat * 100.0)/60.0));
+		to_host_data.GPS_lat = (int32_t)(round(((double)gps_lat * 10.0)/60.0));
 		///if(telemetry_sats >= 5) gotFix = true;
 		res = 1;
 		break;

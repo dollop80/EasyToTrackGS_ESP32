@@ -120,9 +120,10 @@ void app_main()
 	initProgModePin();
 	if(getProgModePin())
 	{
-		oledShowProgramming(3);
+		xTaskCreatePinnedToCore(&oledShowProgramming, "oled_task", 2048, NULL, 1, &xHandleOled, 1);
+		setProgrammingRes(3);
 		uint8_t p_res = runProgrammer();
-		oledShowProgramming(p_res);
+		setProgrammingRes(p_res);
 		while(true);
 	}
 	

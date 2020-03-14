@@ -16,6 +16,7 @@
 #include "../protocol_detection.h"
 #include "../tracker.h"
 #include "oled_task.h"
+#include "components/avr-isp/avr_isp_helper.h"
 
 extern TaskHandle_t xHandleOled;
 extern TO_HOST_DATA to_host_data;
@@ -34,6 +35,7 @@ extern uint16_t gTelAzimuth;
 extern uint8_t gTelElevation;
 
 u8g2_t u8g2; // a structure which will contain all the data for one display
+uint8_t progRes = 0;
 
 static const char TAG[] = "ETT-OLED";
 
@@ -234,28 +236,46 @@ void initOled(void) {
 	u8g2_SendBuffer(&u8g2);
 }
 
-void oledShowProgramming(uint8_t done)
+void oledShowProgramming(void *pvParameter)
 {
+	char buf[20];
+	
 	u8g2_ClearBuffer(&u8g2);
 		
 	//ESP_LOGI(TAG, "u8g2_SetFont");
     u8g2_SetFont(&u8g2, u8g2_font_ncenB10_tr);
 	//ESP_LOGI(TAG, "u8g2_DrawStr");
-	if(done == 3){
-		u8g2_DrawStr(&u8g2, 1,11,"Programming");
-		u8g2_DrawStr(&u8g2, 10,35,"ATMega8...");
-	} else if(done == 2){
-		u8g2_DrawStr(&u8g2, 1,11,"Programming");
-		u8g2_DrawStr(&u8g2, 10,35,"not needed");		
-	} else if(done == 1) {
-		u8g2_DrawStr(&u8g2, 1,11,"Programming");
-		u8g2_DrawStr(&u8g2, 25,35,"DONE!");
-	} else if(done == 0) {
-		u8g2_DrawStr(&u8g2, 1,11,"Programming");
-		u8g2_DrawStr(&u8g2, 15,35,"FAILED :(");
-	}
+	
+	while(true)
+	{
+		u8g2_ClearBuffer(&u8g2);
+		
+		if(progRes == 3){
+			u8g2_DrawStr(&u8g2, 1,11,"Programming");
+			u8g2_DrawStr(&u8g2, 10,35,"ATMega8...");
 			
-	//ESP_LOGI(TAG, "u8g2_SendBuffer");
-	u8g2_SendBuffer(&u8g2);
+			snprintf (buf, 12, "Line# %d", getLineNumber());
+			u8g2_DrawStr(&u8g2, 20, 60, buf);
+			
+		} else if(progRes == 2){
+			u8g2_DrawStr(&u8g2, 1,11,"Programming");
+			u8g2_DrawStr(&u8g2, 10,35,"not needed");		
+		} else if(progRes == 1) {
+			u8g2_DrawStr(&u8g2, 1,11,"Programming");
+			u8g2_DrawStr(&u8g2, 25,35,"DONE!");
+		} else if(progRes == 0) {
+			u8g2_DrawStr(&u8g2, 1,11,"Programming");
+			u8g2_DrawStr(&u8g2, 15,35,"FAILED :(");
+		}
+				
+		//ESP_LOGI(TAG, "u8g2_SendBuffer");
+		u8g2_SendBuffer(&u8g2);
+		vTaskDelay( pdMS_TO_TICKS(300) );
+	}
+}
+
+void setProgrammingRes(uint8_t res)
+{
+	progRes = res;
 }
 

@@ -44,7 +44,6 @@ uint8_t telem_parse(uint16_t telem_proto, uint8_t b)
 		default:
 		break;		
 	}
-	
 	return res;
 }
 
