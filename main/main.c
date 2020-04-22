@@ -65,6 +65,7 @@ SOFTWARE.
 #include "tasks/oled_task.h"
 #include "tasks/uart_task.h"
 #include "tasks/send_to_host_task.h"
+#include "tasks/servo_task.h"
 
 
 TELEM_DATA telem_data;
@@ -79,6 +80,7 @@ TaskHandle_t xHandleUart1 = NULL;
 TaskHandle_t xHandleUart2 = NULL;
 TaskHandle_t xHandleSendToHost = NULL;
 TaskHandle_t xHandleTracker = NULL;
+TaskHandle_t xHandleServo = NULL;
 
 int16_t gBThandle;
 int16_t gWFsock = -1;
@@ -162,4 +164,7 @@ void app_main()
 	xTaskCreate(send_to_host_task, "send_to_host_task", 1024, NULL, 6, &xHandleSendToHost);
 	
 	xTaskCreate(tracker_task, "tracker_task", 1024, NULL, 5, &xHandleTracker);
+#ifdef ESP32_ONLY
+	xTaskCreate(servo_task, "servo_task", 2048, NULL, 5, &xHandleServo);
+#endif
 }

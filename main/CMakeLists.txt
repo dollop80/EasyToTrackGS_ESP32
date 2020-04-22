@@ -10,6 +10,7 @@ idf_component_register(SRCS "main.c"
 					"tasks/oled_task.c"
 					"tasks/uart_task.c"
 					"tasks/send_to_host_task.c"
+					"tasks/servo_task.c"
 
                     INCLUDE_DIRS ".")
 

@@ -5,6 +5,8 @@
 //----------------------------------
 #define DG
 
+#define ESP32_ONLY
+
 #define VERSION 20
 
 #define PIN_NUM_VID_STD  15
