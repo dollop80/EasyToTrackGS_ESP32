@@ -23,6 +23,7 @@
 
 extern TaskHandle_t xHandleServo;
 extern TO_HOST_DATA to_host_data;
+extern AZ_ELEV_DATA az_elev_data;
 
 
 //static const char TAG[] = "ETT-SERVO";
@@ -108,8 +109,8 @@ uint16_t angle;
 uint16_t Azimuth, Elevation;
 
 if(mode_360_ram && gTelElevation > 90) gTelElevation = 90;  //correction when switched between 180/360 mode from application
-////gAzElevData.Track_azimuth = gTrack_azimuth;
-////gAzElevData.Track_elevation = gTrack_elevation;
+az_elev_data.Track_azimuth = gTrack_azimuth;
+az_elev_data.Track_elevation = gTrack_elevation;
 
 angle=gTelAzimuth;//gTrack_azimuth;
 
@@ -130,8 +131,8 @@ else
   Azimuth=angle;
   Elevation=gTelElevation;
   }
-////gHostData.Track_azimuth=Azimuth;
-////gHostData.Track_elevation=Elevation;
+to_host_data.Track_azimuth=Azimuth;
+to_host_data.Track_elevation=Elevation;
 set_ppm_out(0, Azimuth);    
 set_ppm_out(1, Elevation);    
 }

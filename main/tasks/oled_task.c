@@ -31,11 +31,17 @@ extern tracker_mode gTracker_m;
 extern uint8_t gVideoStandard;
 extern uint8_t gVideoThreshold;
 
+extern uint8_t gTelemPhase;
+uint8_t TelemPhase = 0;
+uint8_t TelemPhasePrev;
+int item = 9712;
+
 extern uint16_t gTelAzimuth;
 extern uint8_t gTelElevation;
 
 u8g2_t u8g2; // a structure which will contain all the data for one display
 uint8_t progRes = 0;
+
 
 static const char TAG[] = "ETT-OLED";
 
@@ -108,9 +114,35 @@ void oled_task(void *pvParameter)
 						snprintf (buf, 6, "SETUP");
 						u8g2_DrawStr(&u8g2, 47, 30, buf);				
 					break;
-				}			
+				}
+				u8g2_SetFont(&u8g2, u8g2_font_unifont_t_75);
+
+				if(TelemPhasePrev != gTelemPhase) 
+				{
+					TelemPhasePrev = gTelemPhase;
+					switch(++TelemPhase)
+					{
+						case 1:
+							item = 9712;
+						break;
+						case 2:
+							item = 9713;
+						break;
+						case 3:
+							item = 9714;
+						break;
+						case 4:
+							item = 9715;
+							TelemPhase = 0;
+						break;
+					}
+				}
+				
+				u8g2_DrawGlyph(&u8g2, 0, 44, item);
+						
 			}
 			
+			u8g2_SetFont(&u8g2, u8g2_font_6x10_mf);
 			snprintf (buf, 16, "%.1fV", getVoltage()/(4700.0/(4700.0+47000.0))/1000.0);
 			u8g2_DrawStr(&u8g2, 90, 44, buf);
 

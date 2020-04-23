@@ -28,6 +28,7 @@
 #include "send_to_host_task.h"
 
 extern TO_HOST_DATA to_host_data;
+extern AZ_ELEV_DATA az_elev_data;
 extern int16_t gBThandle;
 extern int16_t gWFsock;
 
@@ -57,6 +58,27 @@ void send_to_host_task(void *pvParameters)
 					//break;
 				}		
 			}
+			/*
+			#ifdef ESP32_ONLY
+			len = packPacket(2, txbuf, (uint8_t *)&az_elev_data, sizeof(AZ_ELEV_DATA));
+
+			if(gBThandle > 0)
+			{
+				esp_spp_write(gBThandle, len, txbuf);
+				//ESP_LOGI(TAG, "written");
+			} 
+			else if (gWFsock != -1)
+			{
+				int res = send(gWFsock, txbuf, len, 0);
+				if (res < 0) {
+					ESP_LOGE(TAG, "Error sending SOCK: errno %d", errno);
+					//break;
+				}		
+			}
+			#endif
+			*/
+			
+			
 					
 			sendHostHomeMessageToGS();
 		}

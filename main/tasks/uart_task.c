@@ -48,6 +48,8 @@ uint8_t rxbuf[256];
 // Register to collect data length
 uint16_t urxlen;
 
+uint8_t gTelemPhase = 0;
+
 #define U2RXD 33
 #define U2TXD 32
 
@@ -210,6 +212,7 @@ void uart2_event_task(void *pvParameters)
 							if(res)
 							{
 								process_gps();
+								gTelemPhase++;
 								//ESP_LOGI(TAG, "[OK], %d",getProtocol());		
 							}								
 						}
