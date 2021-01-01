@@ -76,6 +76,7 @@ AZ_ELEV_DATA az_elev_data;
 TaskHandle_t xHandleTCP = NULL;
 TaskHandle_t xHandleMonitor = NULL;
 TaskHandle_t xHandleOled = NULL;
+TaskHandle_t xHandleUart0 = NULL;
 TaskHandle_t xHandleUart1 = NULL;
 TaskHandle_t xHandleUart2 = NULL;
 TaskHandle_t xHandleSendToHost = NULL;
@@ -155,6 +156,8 @@ void app_main()
 	
 	xTaskCreatePinnedToCore(&monitoring_task, "monitoring_task", 1024*2, NULL, 1, &xHandleMonitor, 1);
 	
+	xTaskCreate(uart0_event_task, "uart0_task", 2048, NULL, 12, &xHandleUart0);
+		
 	//Create a task to handler UART event from ISR
     xTaskCreate(uart1_event_task, "uart1_task", 2048, NULL, 12, &xHandleUart1);
 	

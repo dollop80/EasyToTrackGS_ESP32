@@ -49,6 +49,7 @@ int16_t AddAngleU(int16_t a, int16_t b);
 extern TELEM_DATA telem_data;
 extern TO_HOST_DATA to_host_data;
 extern AZ_ELEV_DATA az_elev_data;
+
 extern uint16_t gTelAzimuth;
 extern uint8_t gTelElevation;
 extern tracker_mode gTracker_m;
@@ -73,6 +74,23 @@ static const adc_atten_t atten = ADC_ATTEN_DB_6;
 static const adc_unit_t unit = ADC_UNIT_1;
 uint32_t adc_reading = 0;
 uint32_t voltage = 0;
+bool forced_mnl_cntrl = false;
+
+#ifdef ESP32_ONLY
+	RSSI_DATA gRssiData;
+	FROM_HOST_DATA from_host_data;
+	bool g_servo_values_req = false;
+	bool home_from_host = false;
+	int16_t gTrack_elevation = 0;
+	int16_t gTrack_azimuth = 0;
+	bool settings_changed = false;
+	bool g_gefault_az_elev_change = false;
+	extern uint8_t EEP_soundOn;	
+	extern uint16_t EEP_def_azimuth;
+	extern uint8_t EEP_def_elevation;
+	extern uint8_t EEP_delay_change_ppm;
+	extern uint16_t EEP_Off_azimuth;
+#endif
 
 GPS_PNT gPntStart, gPntCurrent;
 GPS_VEC gVecToStart;
@@ -255,6 +273,9 @@ void sendHostHomeMessageToGS()
 			
 		uint8_t len = packPacket(type, bufftosend, encodedbuff, cnt);		
 		uart_write_bytes(UART_NUM_1, (const char *) bufftosend, len);
+#ifdef ESP32_ONLY	
+		uart_write_bytes(UART_NUM_0, (const char *) bufftosend, len);
+#endif
 }
 
 
@@ -316,14 +337,16 @@ void decode_packet_and_send_to_gs(const char * rx_buffer, int len)
 		mlen = parseChar(&deck_pack, rx_buffer[i]);
 		if(mlen)
 		{
-			if(deck_pack.msg[0] == 0x04 && deck_pack.msg[4] == 0x01) //FROMHOST_MANUAL_AZIMUTH_MSG_ID and force manual mode 
+			if(deck_pack.msg[0] == FROMHOST_MANUAL_AZIMUTH_MSG_ID && deck_pack.msg[4] == 0x01) //FROMHOST_MANUAL_AZIMUTH_MSG_ID and force manual mode 
 			{
+				forced_mnl_cntrl = true;
 				gTracker_m = MANUAL;//manual_tracker_mode = true;
-				gTelAzimuth/*to_host_data.Track_azimuth*/ = deck_pack.msg[2] + ((uint16_t)deck_pack.msg[1] << 8);
-				gTelElevation/*to_host_data.Track_elevation*/ = deck_pack.msg[3];
+				gTelAzimuth = deck_pack.msg[2] + ((uint16_t)deck_pack.msg[1] << 8);
+				gTelElevation = deck_pack.msg[3];
 			}
-			else if(deck_pack.msg[0] == 0x04 && deck_pack.msg[4] == 0x00)
+			else if(deck_pack.msg[0] == FROMHOST_MANUAL_AZIMUTH_MSG_ID && deck_pack.msg[4] == 0x00)
 			{
+				forced_mnl_cntrl = false;
 				//manual_tracker_mode = false;
 				if(getProtocol() == TP_MSV)
 					gTracker_m = TRACKING_V;
@@ -331,9 +354,9 @@ void decode_packet_and_send_to_gs(const char * rx_buffer, int len)
 					gTracker_m = TRACKING_T;
 			}
 			
-			else if(deck_pack.msg[0] == 0x00)
+			else if(deck_pack.msg[0] == FROMHOST_MSG_ID_SETUP)
 			{
-				if(deck_pack.msg[9] == 1)
+				if(deck_pack.msg[9] > 0)
 				{
 					 gTracker_m = SETUP;
 				}
@@ -344,9 +367,83 @@ void decode_packet_and_send_to_gs(const char * rx_buffer, int len)
 					else if(getProtocol())
 						gTracker_m = TRACKING_T;		 
 				}
+				
+#ifdef ESP32_ONLY
+				  from_host_data.OutPPM_Min[0] = (((uint16_t)deck_pack.msg[1]<<8) + deck_pack.msg[2])/2.5; 
+				  from_host_data.OutPPM_Min[1] = (((uint16_t)deck_pack.msg[3]<<8) + deck_pack.msg[4])/2.5;
+				  from_host_data.OutPPM_Max[0] = (((uint16_t)deck_pack.msg[5]<<8) + deck_pack.msg[6])/2.5;
+				  from_host_data.OutPPM_Max[1] = (((uint16_t)deck_pack.msg[7]<<8) + deck_pack.msg[8])/2.5; 
+				  from_host_data.mode_360 = deck_pack.msg[10];
+				  from_host_data.mode = deck_pack.msg[9]; 
+#endif
 			}
+#ifdef ESP32_ONLY			
+			else if(deck_pack.msg[0] == SERVO_REQ_MSG_ID)
+			{				
+				g_servo_values_req = true;
+			}
+			
+			else if(deck_pack.msg[0] == FROMHOST_AZIMUTH_MSG_ID)
+			{			
+				if (deck_pack.msg[3] == 1)
+					settings_changed = true;
+				else
+					EEP_Off_azimuth = ((uint16_t)deck_pack.msg[1]<<8) + deck_pack.msg[2]; 
+			}
+			
+			else if(deck_pack.msg[0] == FROMHOST_SOUND_MSG_ID)
+			{
+				EEP_soundOn = deck_pack.msg[1]; 
+				settings_changed = true;
+			}		               
+
+			else if(deck_pack.msg[0] == FROMHOST_PARAMS_ID_SETUP)
+			{
+				settings_changed = true;   
+				EEP_delay_change_ppm = deck_pack.msg[1];
+				if(deck_pack.msg[2]==1) 
+					g_gefault_az_elev_change = true;
+			}
+
+			else if(deck_pack.msg[0] == HOST2GS_POWEROFF_ID)
+			{
+				/*gTrack_azimuth*/gTelAzimuth = EEP_def_azimuth;
+				/*gTrack_elevation*/gTelElevation = EEP_def_elevation; 
+			}
+ 
+			else if(deck_pack.msg[0] == HOST2GS_HOST_HOME_ID)
+			{
+				home_from_host = true;
+				HOST_HOME_DATA * HostHomeData = (HOST_HOME_DATA *)deck_pack.msg;
+				/*gTrack_azimuth*/gTelAzimuth=HostHomeData->Track_azimuth;
+				/*gTrack_elevation*/gTelElevation=HostHomeData->Track_elevation; 
+				to_host_data.Home_lat=HostHomeData->Home_lat;
+				to_host_data.Home_lon=HostHomeData->Home_lon;
+			}    
+
+			else if(deck_pack.msg[0] == HOST2GS_RSSI_ID)
+			{
+				 RSSI_DATA * RssiData = (RSSI_DATA *)deck_pack.msg;
+				 gRssiData.mode = RssiData->mode;
+				 if (gRssiData.mode>0)
+				 {
+					gTracker_m = SETUP;//programming_mode = 1;
+				 } else {
+					//programming_mode = 0;
+					if(getProtocol() == TP_MSV)
+						gTracker_m = TRACKING_V;
+					else if(getProtocol())
+						gTracker_m = TRACKING_T;
+				 }
+				 if(gRssiData.mode==2)
+				 {
+					gRssiData.max = RssiData->max;
+					gRssiData.min = RssiData->min;
+				 }
+			}  
+#endif			
 			 
-			else if(deck_pack.msg[0] == 0x0B) //VIDEO_SETTINGS_ID
+			else if(deck_pack.msg[0] == FROMHOST_VIDEOSETTINGS_ID) //VIDEO_SETTINGS_ID
 			{
 				gVideoStandard = deck_pack.msg[2];
 				gVideoThreshold = deck_pack.msg[3];
@@ -360,7 +457,7 @@ void decode_packet_and_send_to_gs(const char * rx_buffer, int len)
 				#endif
 			}
 			
-			else if(deck_pack.msg[0] == 0x0C) //EXT_TELEM_SETTINGS_ID
+			else if(deck_pack.msg[0] == FROMHOST_EXTTELEMSETTINGS_ID) //EXT_TELEM_SETTINGS_ID
 			{
 				if(deck_pack.msg[1] == 1) //Save settings
 				{
@@ -396,6 +493,7 @@ void decode_packet_and_send_to_gs(const char * rx_buffer, int len)
 	}
 	
 	uart_write_bytes(UART_NUM_1, (const char *)rx_buffer, len);
+	//uart_write_bytes(UART_NUM_0, (const char *)rx_buffer, len);
 }
 
 bool decode_packet_for_host(uint8_t * rx_buffer, int len)
@@ -448,11 +546,12 @@ void tracker_task(void *pvParameters)
 {
 	while(1)
 	{
-		if(telem_data.GPS_mode > 2 && (gTracker_m!=MANUAL /*!manual_tracker_mode*/))
+		if(telem_data.GPS_mode > 2 && (gTracker_m != MANUAL /*!manual_tracker_mode*/))
 		{
 			calc_los();
 			gTelAzimuth = CalcTrackAzimut();
 			gTelElevation = CalcTrackElevation();
+			to_host_data.InputMode = ESP32_ONLY_DEVICE_ID; //let the application to know that ESP32 works in stand alone mode
 		}
 		
 		//read voltage
