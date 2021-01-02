@@ -5,7 +5,7 @@
 //----------------------------------
 #define DG
 
-#define ESP32_ONLY
+//#define ESP32_ONLY
 
 #define VERSION 20
 

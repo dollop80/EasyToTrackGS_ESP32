@@ -49,6 +49,7 @@ void oled_task(void *pvParameter)
 {
 	uint8_t ii = 0;
 	char buf[20];
+	char t=' ';
 	char * p_buf;
 	p_buf = buf;
 	
@@ -76,6 +77,21 @@ void oled_task(void *pvParameter)
 			snprintf (buf, 12, "Az:%d", to_host_data.Track_azimuth);
 			u8g2_DrawStr(&u8g2, 90, 10, buf);
 			
+			//Draw Lat, Lon
+			if(to_host_data.GPS_lat > 0)
+				t='N';
+			else
+				t='S';
+			snprintf (buf, 15, "%.6f%c", ((abs(to_host_data.GPS_lat))/100000.0f), t);
+			u8g2_DrawStr(&u8g2, 0, 20, buf);
+			if(to_host_data.GPS_lon > 0)
+				t='W';
+			else
+				t='E';
+			snprintf (buf, 15, "%.6f%c", ((abs(to_host_data.GPS_lon))/100000.0f), t);
+			u8g2_DrawStr(&u8g2, 64, 20, buf);
+			
+			
 
 			snprintf (buf, 12, "Verr:%d", to_host_data.AVErrors);
 			u8g2_DrawStr(&u8g2, 40, 54, buf);
@@ -83,11 +99,12 @@ void oled_task(void *pvParameter)
 			snprintf (buf, 12, "RSSI:%d", to_host_data.AV_RSSI);
 			u8g2_DrawStr(&u8g2, 88, 54, buf);
 
+			// Draw working mode
+			u8g2_SetFont(&u8g2, u8g2_font_6x10_mf);
 			if(gFirstU2byte && !getProtocol())
 			{
-				u8g2_SetFont(&u8g2, u8g2_font_6x10_mf);
 				snprintf (buf, 19, "Detecting protocol");
-				u8g2_DrawStr(&u8g2, 5, 30, buf);
+				u8g2_DrawStr(&u8g2, 5, 32, buf);
 			}
 			else
 			{
@@ -95,28 +112,28 @@ void oled_task(void *pvParameter)
 				{
 					gTracker_m = TRACKING_T;
 				}
-				u8g2_SetFont(&u8g2, u8g2_font_6x10_mf);
 				switch(gTracker_m)
 				{
 					case TRACKING_V:
 						snprintf (buf, 16, "Video->TRACKING");
-						u8g2_DrawStr(&u8g2, 15, 30, buf);
+						u8g2_DrawStr(&u8g2, 15, 32, buf);
 					break;
 					case TRACKING_T:
 						snprintf (buf, 16, "Telem->TRACKING");
-						u8g2_DrawStr(&u8g2, 15, 30, buf);				
+						u8g2_DrawStr(&u8g2, 15, 32, buf);				
 					break;
 					case MANUAL:
 						snprintf (buf, 7, "MANUAL");
-						u8g2_DrawStr(&u8g2, 42, 30, buf);
+						u8g2_DrawStr(&u8g2, 42, 32, buf);
 					break;
 					case SETUP:
 						snprintf (buf, 6, "SETUP");
-						u8g2_DrawStr(&u8g2, 47, 30, buf);				
+						u8g2_DrawStr(&u8g2, 47, 32, buf);				
 					break;
 				}
 				u8g2_SetFont(&u8g2, u8g2_font_unifont_t_75);
-
+				
+				//Draw telemetry status
 				if(TelemPhasePrev != gTelemPhase) 
 				{
 					TelemPhasePrev = gTelemPhase;
@@ -138,10 +155,10 @@ void oled_task(void *pvParameter)
 					}
 				}
 				
-				u8g2_DrawGlyph(&u8g2, 0, 44, item);
-						
+				u8g2_DrawGlyph(&u8g2, 0, 44, item);					
 			}
 			
+			//Draw voltage
 			u8g2_SetFont(&u8g2, u8g2_font_6x10_mf);
 			snprintf (buf, 16, "%.1fV", getVoltage()/(4700.0/(4700.0+47000.0))/1000.0);
 			u8g2_DrawStr(&u8g2, 90, 44, buf);
@@ -178,6 +195,7 @@ void oled_task(void *pvParameter)
 				break;
 			}
 			
+			//Draw protocol type
 			switch(getProtocol())
 			{
 				case TP_MFD:
