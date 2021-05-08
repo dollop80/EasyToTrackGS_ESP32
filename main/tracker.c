@@ -514,6 +514,8 @@ bool decode_packet_for_host(uint8_t * rx_buffer, int len)
 				{
 					to_host_data.Track_azimuth = ((deck_pack.msg[2]&0xff)<<8)+(deck_pack.msg[1]&0xff);
 					to_host_data.Track_elevation = ((deck_pack.msg[4]&0xff)<<8)+(deck_pack.msg[3]&0xff);
+					to_host_data.GPS_lat = ((deck_pack.msg[8]&0xff)<<24)+((deck_pack.msg[7]&0xff)<<16)+((deck_pack.msg[6]&0xff)<<8)+(deck_pack.msg[5]&0xff);
+					to_host_data.GPS_lon = ((deck_pack.msg[12]&0xff)<<24)+((deck_pack.msg[11]&0xff)<<16)+((deck_pack.msg[10]&0xff)<<8)+(deck_pack.msg[9]&0xff);
 					to_host_data.ID = deck_pack.msg[47];
 				}
 				else

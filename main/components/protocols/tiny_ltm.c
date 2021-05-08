@@ -53,21 +53,21 @@ uint8_t ltm_check() {
   
   if (mw_ltm.LTMcmd == LIGHTTELEMETRY_GFRAME)
   {
-    to_host_data.GPS_lat = ltmread_s32();
-    to_host_data.GPS_lon = ltmread_s32();
+    to_host_data.GPS_lat = ltmread_s32()/100;
+    to_host_data.GPS_lon = ltmread_s32()/100;
     to_host_data.GPS_speed = (uint16_t)ltmread_u8() * 18/5;//36/10;                // LTM gives m/s, we expect km/h
     telem_data.Alt = (ltmread_s32())/100;   // LTM altitude in cm, we expect m.
     
 	ltm_satsfix = ltmread_u8();
     telem_data.GPS_sats = (ltm_satsfix >> 2) & 0xFF;
-    telem_data.GPS_mode = ((ltm_satsfix & 0b00000011) <= 1) ? 0 : 1; 
+    telem_data.GPS_mode = (ltm_satsfix & 0b00000011); //((ltm_satsfix & 0b00000011) <= 1) ? 0 : 1; 
     
     res = 1;
   }
 
   if (mw_ltm.LTMcmd == LIGHTTELEMETRY_AFRAME)
   {
-    to_host_data.PitchAngle=(int16_t)ltmread_u16();
+    to_host_data.PitchAngle= - (int16_t)ltmread_u16();
     to_host_data.RollAngle=(int16_t)ltmread_u16();
     to_host_data.GPS_course = (int16_t)ltmread_u16();
 #ifdef HEADINGCORRECT

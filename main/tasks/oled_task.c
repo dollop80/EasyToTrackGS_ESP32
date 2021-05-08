@@ -249,8 +249,8 @@ void initOled(void) {
 	u8g2_esp32_hal_init(u8g2_esp32_hal);
     
 	//Set the OLED type
-	//u8g2_Setup_ssd1306_i2c_128x64_noname_f(
-	u8g2_Setup_sh1106_i2c_128x64_noname_f(
+	u8g2_Setup_ssd1306_i2c_128x64_noname_f( //try this if a display is 2 pixels shifted left
+	//u8g2_Setup_sh1106_i2c_128x64_noname_f(
 		&u8g2,
 		U8G2_R0,
 		//u8x8_byte_sw_i2c,
@@ -261,7 +261,8 @@ void initOled(void) {
 	ESP_LOGI(TAG, "u8g2_InitDisplay");
 	u8g2_InitDisplay(&u8g2); // send init sequence to the display, display is in sleep mode after this,
 	
-	u8g2_SetFlipMode(&u8g2, 1); // send init sequence to the display, display is in sleep mode after this,
+	//u8g2_SetFlipMode(&u8g2, 1); // Flip display,
+	u8g2_SetFlipMode(&u8g2, 0); // Don't flip display
 
 	//ESP_LOGI(TAG, "u8g2_SetPowerSave");
 	u8g2_SetPowerSave(&u8g2, 0); // wake up display
