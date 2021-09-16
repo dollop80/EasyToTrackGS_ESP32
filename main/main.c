@@ -95,6 +95,10 @@ uint8_t gVideoStandard;
 uint8_t gVideoThreshold;
 uint8_t gExtTelemType;
 uint8_t gExtTelemBaud;
+uint16_t gTelemTimeout = TELEM_TIMEOUT;
+int32_t	gLastLat = 0;
+int32_t	gLastLon = 0;
+bool gCoordsSaved = false;
 
 wifi_mode gWifi_m = NO;
 tracker_mode gTracker_m = TRACKING_V;
@@ -149,6 +153,13 @@ void app_main()
 	}
 	if(gExtTelemType != 0)
 		setProtocol(1 << (gExtTelemType+1));
+	
+	if(!tracker_fetch_last_coords(&gLastLat, &gLastLon))
+	{
+		gLastLat = 0;
+		gLastLon = 0;
+		tracker_save_last_coords(&gLastLat, &gLastLon);
+	}
 	
 	initUart(gExtTelemBaud);
 		

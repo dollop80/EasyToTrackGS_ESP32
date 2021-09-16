@@ -570,6 +570,56 @@ void tracker_task(void *pvParameters)
 	}
 }
 
+esp_err_t tracker_save_last_coords(int32_t * lat, int32_t * lon){
+
+	nvs_handle handle;
+	esp_err_t esp_err;
+	ESP_LOGI(TAG, "About to save last latlon to flash");
+
+		esp_err = nvs_open(tracker_nvs_namespace, NVS_READWRITE, &handle);
+		if (esp_err != ESP_OK) return esp_err;
+
+		esp_err = nvs_set_i32(handle, "last_lat", *lat);
+		if (esp_err != ESP_OK) return esp_err;
+
+		esp_err = nvs_set_i32(handle, "last_lon", *lon);
+		if (esp_err != ESP_OK) return esp_err;
+
+		esp_err = nvs_commit(handle);
+		if (esp_err != ESP_OK) return esp_err;
+
+		nvs_close(handle);
+
+		ESP_LOGD(TAG, "eet_last_latlon written: lat:%d lon:%d",*lat,*lon);
+
+	return ESP_OK;
+}
+
+bool tracker_fetch_last_coords(int32_t * lat, int32_t * lon){
+
+	nvs_handle handle;
+	esp_err_t esp_err;
+	if(nvs_open(tracker_nvs_namespace, NVS_READONLY, &handle) == ESP_OK){
+
+		esp_err = nvs_get_i32(handle, "last_lat", lat);
+		if(esp_err != ESP_OK)
+			return false;
+		
+		esp_err = nvs_get_i32(handle, "last_lon", lon);
+		if(esp_err != ESP_OK)
+			return false;
+
+		nvs_close(handle);
+
+		ESP_LOGI(TAG, "eet_last_coords fetched: lat:%d lon:%d",*lat,*lon);
+
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
 
 esp_err_t tracker_save_video_config(){
 

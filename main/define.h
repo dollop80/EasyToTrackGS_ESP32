@@ -36,6 +36,7 @@
 
 #define SERIALBUFFERSIZE 150
 
+#define TELEM_TIMEOUT	5000 //ms
 
 #define BIT_HORIZ   0b00000001
 #define BIT_BARO    0b00000010

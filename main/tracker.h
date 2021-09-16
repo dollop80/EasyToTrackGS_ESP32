@@ -18,3 +18,5 @@ void initProgModePin(void);
 bool getProgModePin(void);
 void initADC(void);
 float getVoltage(void);
+esp_err_t tracker_save_last_coords(int32_t * lat, int32_t * lon);
+bool tracker_fetch_last_coords(int32_t * lat, int32_t * lon);

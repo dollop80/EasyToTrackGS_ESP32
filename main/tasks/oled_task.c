@@ -31,10 +31,15 @@ extern tracker_mode gTracker_m;
 extern uint8_t gVideoStandard;
 extern uint8_t gVideoThreshold;
 
+extern int32_t	gLastLat;
+extern int32_t	gLastLon;
+extern uint16_t gTelemTimeout;
+
 extern uint8_t gTelemPhase;
 uint8_t TelemPhase = 0;
 uint8_t TelemPhasePrev;
 int item = 9712;
+uint8_t blink_coords_cnt = 0;
 
 extern uint16_t gTelAzimuth;
 extern uint8_t gTelElevation;
@@ -48,7 +53,7 @@ static const char TAG[] = "ETT-OLED";
 void oled_task(void *pvParameter)
 {
 	uint8_t ii = 0;
-	char buf[20];
+	char buf[22];
 	char t=' ';
 	char * p_buf;
 	p_buf = buf;
@@ -78,20 +83,46 @@ void oled_task(void *pvParameter)
 			u8g2_DrawStr(&u8g2, 90, 10, buf);
 			
 			//Draw Lat, Lon
-			if(to_host_data.GPS_lat > 0)
-				t='N';
+			if(gTelemTimeout < TELEM_TIMEOUT)
+			{
+				if(to_host_data.GPS_lat > 0)
+					t='N';
+				else
+					t='S';
+				snprintf (buf, 15, "%.6f%c", ((abs(to_host_data.GPS_lat))/100000.0f), t);
+				u8g2_DrawStr(&u8g2, 0, 20, buf);
+				if(to_host_data.GPS_lon > 0)
+					t='W';
+				else
+					t='E';
+				snprintf (buf, 15, "%.6f%c", ((abs(to_host_data.GPS_lon))/100000.0f), t);
+				u8g2_DrawStr(&u8g2, 64, 20, buf);
+			}
 			else
-				t='S';
-			snprintf (buf, 15, "%.6f%c", ((abs(to_host_data.GPS_lat))/100000.0f), t);
-			u8g2_DrawStr(&u8g2, 0, 20, buf);
-			if(to_host_data.GPS_lon > 0)
-				t='W';
-			else
-				t='E';
-			snprintf (buf, 15, "%.6f%c", ((abs(to_host_data.GPS_lon))/100000.0f), t);
-			u8g2_DrawStr(&u8g2, 64, 20, buf);
-			
-			
+			{
+				blink_coords_cnt++;
+				if(blink_coords_cnt > 10) blink_coords_cnt = 0;
+				if(blink_coords_cnt < 3)
+				{
+					snprintf (buf, 22, "%s", "Waiting for telemetry");
+					u8g2_DrawStr(&u8g2, 5, 20, buf);
+				}
+				else
+				{
+					if(gLastLat > 0)
+						t='N';
+					else
+						t='S';
+					snprintf (buf, 15, "%.6f%c", ((abs(gLastLat))/100000.0f), t);
+					u8g2_DrawStr(&u8g2, 0, 20, buf);
+					if(gLastLon > 0)
+						t='W';
+					else
+						t='E';
+					snprintf (buf, 15, "%.6f%c", ((abs(gLastLon))/100000.0f), t);
+					u8g2_DrawStr(&u8g2, 64, 20, buf);				
+				}
+			}
 
 			snprintf (buf, 12, "Verr:%d", to_host_data.AVErrors);
 			u8g2_DrawStr(&u8g2, 40, 54, buf);

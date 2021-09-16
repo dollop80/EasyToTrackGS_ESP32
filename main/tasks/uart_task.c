@@ -46,6 +46,7 @@ static QueueHandle_t uart2_queue;
 static QueueHandle_t uart1_queue;
 static QueueHandle_t uart0_queue;
 
+extern uint16_t gTelemTimeout;
 
 uint8_t gTelemPhase = 0;
 
@@ -216,7 +217,7 @@ void uart2_event_task(void *pvParameters)
 								process_gps();
 								gTelemPhase++;
 								//ESP_LOGI(TAG, "[OK], %d",getProtocol());		
-							}								
+							} 
 						}
 					}
 					//ESP_LOGI(TAG, "[DATA EVT]:");

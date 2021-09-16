@@ -30,6 +30,14 @@
 
 extern TO_HOST_DATA to_host_data;
 extern AZ_ELEV_DATA az_elev_data;
+
+int32_t	gPrevLat;
+int32_t	gPrevLon;
+extern int32_t	gLastLat;
+extern int32_t	gLastLon;
+extern uint16_t gTelemTimeout;
+extern bool gCoordsSaved;
+
 #ifdef ESP32_ONLY
 	extern CALIBR_DATA gCallibr;
 	extern FROM_HOST_DATA from_host_data;
@@ -54,7 +62,35 @@ void send_to_host_task(void *pvParameters)
 		if(getProtocol()!=TP_MSV)
 		{
 			uint8_t len = packPacket(0, txbuf, (uint8_t *)&to_host_data, sizeof(TO_HOST_DATA));
-
+			
+			// Checking if there is "live" telemetry present
+			if(gPrevLat == to_host_data.GPS_lat && gPrevLon == to_host_data.GPS_lon)
+			{
+				if(gTelemTimeout < TELEM_TIMEOUT) 
+				{
+					gTelemTimeout += 20; //increase the telemetry timeout value
+				}
+				else
+				{
+					//check if need to save last lat lon in EEPROM
+					if(gPrevLat != 0 && gPrevLon != 0 && gCoordsSaved != true)
+					{
+						gCoordsSaved = true;
+						tracker_save_last_coords(&gPrevLat, &gPrevLon);
+					}
+				}
+			}
+			else
+			{
+				gTelemTimeout = 0;
+				gCoordsSaved = false;
+				gLastLat = to_host_data.GPS_lat;
+				gLastLon = to_host_data.GPS_lon;
+			}
+			// save previous GPS telemetry coords
+			gPrevLat = to_host_data.GPS_lat;
+			gPrevLon = to_host_data.GPS_lon;
+			
 			if(gBThandle > 0)
 			{
 				esp_spp_write(gBThandle, len, txbuf);
