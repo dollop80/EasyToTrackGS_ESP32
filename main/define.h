@@ -5,7 +5,7 @@
 //----------------------------------
 #define DG
 
-//#define ESP32_ONLY
+#define ESP32_ONLY CONFIG_ETT_ESP32_ONLY
 
 #define VERSION 20
 
@@ -358,7 +358,7 @@ uint8_t RssiType:2;    //0..3. 0 - Percentage, 1 - raw value
 uint8_t RssiMin;       // 0..255
 uint8_t RssiMax;       // 0..255
 uint8_t TimeZone;
-uint16_t  BattCapacity;  // Емкость батарейки
+uint16_t  BattCapacity;  // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 char  CallSign[12];
 uint16_t Reserve3;
 } __attribute__ ((packed)) tagADDCONF;

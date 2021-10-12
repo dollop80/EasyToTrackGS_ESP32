@@ -38,7 +38,7 @@ extern int32_t	gLastLon;
 extern uint16_t gTelemTimeout;
 extern bool gCoordsSaved;
 
-#ifdef ESP32_ONLY
+#if ESP32_ONLY == 1
 	extern CALIBR_DATA gCallibr;
 	extern FROM_HOST_DATA from_host_data;
 	extern bool g_servo_values_req;
@@ -106,7 +106,7 @@ void send_to_host_task(void *pvParameters)
 			}
 			
 			
-			#ifdef ESP32_ONLY
+			#if ESP32_ONLY == 1
 			uart_write_bytes(UART_NUM_0, (const char *) txbuf, len);
 			
 			if(g_servo_values_req){

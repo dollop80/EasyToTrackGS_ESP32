@@ -120,9 +120,12 @@ void app_main()
 	initBT();
     initWiFi();
 	initOled();
+#if ESP32_ONLY == 0
 	initSPI();
+#endif
 	initSPIFS();
 	initADC();
+#if ESP32_ONLY == 0
 	initVidStdPin();
 	initProgModePin();
 	if(getProgModePin())
@@ -144,7 +147,8 @@ void app_main()
 	#ifdef DIGITAL_THRH_POT
 		i2c_tpl0401_set(gVideoThreshold);
 	#endif
-	
+#endif
+
 	if(!tracker_fetch_ext_telemetry_config())
 	{
 		gExtTelemType = 0; //Auto
@@ -178,7 +182,7 @@ void app_main()
 	xTaskCreate(send_to_host_task, "send_to_host_task", 1024, NULL, 6, &xHandleSendToHost);
 	
 	xTaskCreate(tracker_task, "tracker_task", 1024, NULL, 5, &xHandleTracker);
-#ifdef ESP32_ONLY
+#if ESP32_ONLY == 1
 	xTaskCreate(servo_task, "servo_task", 2048, NULL, 5, &xHandleServo);
 #endif
 }

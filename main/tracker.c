@@ -76,7 +76,7 @@ uint32_t adc_reading = 0;
 uint32_t voltage = 0;
 bool forced_mnl_cntrl = false;
 
-#ifdef ESP32_ONLY
+#if ESP32_ONLY == 1
 	RSSI_DATA gRssiData;
 	FROM_HOST_DATA from_host_data;
 	bool g_servo_values_req = false;
@@ -273,7 +273,7 @@ void sendHostHomeMessageToGS()
 			
 		uint8_t len = packPacket(type, bufftosend, encodedbuff, cnt);		
 		uart_write_bytes(UART_NUM_1, (const char *) bufftosend, len);
-#ifdef ESP32_ONLY	
+#if ESP32_ONLY == 1	
 		uart_write_bytes(UART_NUM_0, (const char *) bufftosend, len);
 #endif
 }
@@ -368,7 +368,7 @@ void decode_packet_and_send_to_gs(const char * rx_buffer, int len)
 						gTracker_m = TRACKING_T;		 
 				}
 				
-#ifdef ESP32_ONLY
+#if ESP32_ONLY == 1
 				  from_host_data.OutPPM_Min[0] = (((uint16_t)deck_pack.msg[1]<<8) + deck_pack.msg[2])/2.5; 
 				  from_host_data.OutPPM_Min[1] = (((uint16_t)deck_pack.msg[3]<<8) + deck_pack.msg[4])/2.5;
 				  from_host_data.OutPPM_Max[0] = (((uint16_t)deck_pack.msg[5]<<8) + deck_pack.msg[6])/2.5;
@@ -377,7 +377,7 @@ void decode_packet_and_send_to_gs(const char * rx_buffer, int len)
 				  from_host_data.mode = deck_pack.msg[9]; 
 #endif
 			}
-#ifdef ESP32_ONLY			
+#if ESP32_ONLY == 1			
 			else if(deck_pack.msg[0] == SERVO_REQ_MSG_ID)
 			{				
 				g_servo_values_req = true;

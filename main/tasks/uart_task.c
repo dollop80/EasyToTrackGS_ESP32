@@ -15,6 +15,8 @@
 #include "lwip/sys.h"
 #include "lwip/netdb.h"
 
+#include "soc/uart_reg.h"
+
 #include "esp_bt.h"
 #include "esp_bt_main.h"
 #include "esp_gap_bt_api.h"

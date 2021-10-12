@@ -50,66 +50,30 @@ config DEV_NAME_PREFIX
 
 endmenu
 
-menu "Wifi Manager Configuration"
+menu "OLED Configuration"
 
-config WIFI_MANAGER_TASK_PRIORITY
-    int "RTOS Task Priority for the wifi_manager"
-    default 5
-    help
-	Tasks spawn by the manager will have a priority of WIFI_MANAGER_TASK_PRIORITY-1. For this particular reason, minimum recommended task priority is 2.
+config DEFAULT_OLED_TYPE
+	int "Display type"
+	default "1306"
+	help 
+		OLED display type. Possible values are: 0:none, 1306:ssd1306, 1106:sh1106, 1309:ssd1309, 1318:ssd1318, 1325:ssd1325
 
-config WIFI_MANAGER_MAX_RETRY
-	int "Max Retry on failed connection"
-    default 2
-    help
-	Defines when a connection is lost/attempt to connect is made, how many retries should be made before giving up.
-
-config DEFAULT_AP_SSID
-    string "Access Point SSID"
-    default "EasyToTrack_WiFi"
-    help
-	SSID (network name) the the esp32 will broadcast.
-
-config DEFAULT_AP_PASSWORD
-    string "Access Point Password"
-    default "EasyToTrack_WiFi"
-    help
-	Password used for the Access Point. Leave empty and set AUTH MODE to WIFI_AUTH_OPEN for no password.
-
-config DEFAULT_AP_CHANNEL
-    int "Access Point WiFi Channel"
-    default 1
-    help
-	Be careful you might not see the access point if you use a channel not allowed in your country.
-
-config DEFAULT_AP_IP
-    string "Access Point IP Address"
-    default "10.0.0.1"
-    help
-	This is used for the redirection to the captive portal. It is recommended to leave unchanged.
-
-config DEFAULT_AP_GATEWAY
-    string "Access Point IP Gateway"
-    default "10.0.0.1"
-    help
-	This is used for the redirection to the captive portal. It is recommended to leave unchanged.
-
-config DEFAULT_AP_NETMASK
-    string "Access Point Netmask"
-    default "255.255.255.0"
-    help
-	This is used for the redirection to the captive portal. It is recommended to leave unchanged.
-
-config DEFAULT_AP_MAX_CONNECTIONS
-    int "Access Point Max Connections"
-    default 4
-    help
-	Max is 4.
-
-config DEFAULT_AP_BEACON_INTERVAL
-    int "Access Point Beacon Interval (ms)"
-    default 100
-    help
-	100ms is the recommended default.
+config DEFAULT_OLED_FLIP 
+	int "Display flip"
+	default "0"
+	range 0 1
+	help 
+		OLED display flip. 0 : no rotation, 1 : rotate display up side down
 
 endmenu
+
+menu "EasyToTrack Type"
+
+	config ETT_ESP32_ONLY
+		int "Single ESP32 Module - Without ATmega8 telemetry-over-video module"
+		default "0"
+		range 0 1
+		help 
+			Set to 1 if you have a dedicated hardware for telemetry-over-video configuration (with ATmega8). Set to 0 if you want to use a bare ESP32 board for EasyToTrack project
+
+	endmenu

@@ -40,7 +40,7 @@ void initWiFi()
 
 void tcp_server_task(void *pvParameters)
 {
-    char rx_buffer[128];
+    char rx_buffer[64];
     char addr_str[128];
     int addr_family;
     int ip_protocol;
@@ -96,7 +96,7 @@ void tcp_server_task(void *pvParameters)
         ESP_LOGI(TAG, "Socket accepted");
 
         while (1) {
-            int len = recv(gWFsock, rx_buffer, sizeof(rx_buffer) - 1, 0);
+            int len = recv(gWFsock, rx_buffer, sizeof(rx_buffer), 0);
             // Error occurred during receiving
             if (len < 0) {
                 ESP_LOGE(TAG, "recv failed: errno %d", errno);
