@@ -5,7 +5,7 @@
 #define PORT 23
 
 #define EXAMPLE_ESP_WIFI_SSID "ETT-GS"
-#define EXAMPLE_ESP_WIFI_PASS "ett-gs"
+#define EXAMPLE_ESP_WIFI_PASS "easytotrack"
 #define EXAMPLE_MAX_STA_CONN 2
 
 

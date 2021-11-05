@@ -268,7 +268,8 @@ uint8_t mav_parse(uint8_t c)
   }
   else if (mav_state == MAV_HEADER_SEQ)
   {
-    if (c==MAV_SYS_ID){
+    if (1 || c==MAV_SYS_ID){
+      to_host_data.ID = c;
       mav_state = MAV_HEADER_SYS;        
     }
     else{
@@ -277,7 +278,7 @@ uint8_t mav_parse(uint8_t c)
   }
   else if (mav_state == MAV_HEADER_SYS)
   {
-    if (c==MAV_COM_ID){
+    if (1 || c==MAV_COM_ID){
       mav_state = MAV_HEADER_COMP;        
     }
     else{

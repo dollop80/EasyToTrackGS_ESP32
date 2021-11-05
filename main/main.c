@@ -119,7 +119,9 @@ void app_main()
 	
 	initBT();
     initWiFi();
+#if CONFIG_DEFAULT_OLED_TYPE != 0
 	initOled();
+#endif
 #if ESP32_ONLY == 0
 	initSPI();
 #endif
@@ -166,9 +168,10 @@ void app_main()
 	}
 	
 	initUart(gExtTelemBaud);
-		
+#if CONFIG_DEFAULT_OLED_TYPE != 0
 	xTaskCreatePinnedToCore(&oled_task, "oled_task", 2048, NULL, 1, &xHandleOled, 1);
-	
+#endif
+
 	xTaskCreatePinnedToCore(&monitoring_task, "monitoring_task", 1024*2, NULL, 1, &xHandleMonitor, 1);
 	
 	xTaskCreate(uart0_event_task, "uart0_task", 2048, NULL, 12, &xHandleUart0);

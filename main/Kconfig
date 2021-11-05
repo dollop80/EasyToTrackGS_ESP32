@@ -74,6 +74,6 @@ menu "EasyToTrack Type"
 		default "0"
 		range 0 1
 		help 
-			Set to 1 if you have a dedicated hardware for telemetry-over-video configuration (with ATmega8). Set to 0 if you want to use a bare ESP32 board for EasyToTrack project
+			Set to 0 if you have a dedicated hardware for telemetry-over-video configuration (with ATmega8). Set to 1 if you want to use a bare ESP32 board for EasyToTrack project
 
 	endmenu
