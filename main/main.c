@@ -124,8 +124,9 @@ void app_main()
 #endif
 #if ESP32_ONLY == 0
 	initSPI();
-#endif
 	initSPIFS();
+#endif
+	
 	initADC();
 #if ESP32_ONLY == 0
 	initVidStdPin();

@@ -274,7 +274,7 @@ void sendHostHomeMessageToGS()
 		uint8_t len = packPacket(type, bufftosend, encodedbuff, cnt);		
 		uart_write_bytes(UART_NUM_1, (const char *) bufftosend, len);
 #if ESP32_ONLY == 1	
-		uart_write_bytes(UART_NUM_0, (const char *) bufftosend, len);
+		////uart_write_bytes(UART_NUM_0, (const char *) bufftosend, len);
 #endif
 }
 
@@ -327,6 +327,9 @@ static void sendAzimuthManualPacketToSocket(bool mode)
 		uart_write_bytes(UART_NUM_1, (const char *) bufftosend, len);
 }
 */
+bool inRange(uint16_t value, uint16_t min, uint16_t max) {
+    return (value>= min) && (value<= max);
+}
 
 void decode_packet_and_send_to_gs(const char * rx_buffer, int len)
 {
@@ -369,12 +372,25 @@ void decode_packet_and_send_to_gs(const char * rx_buffer, int len)
 				}
 				
 #if ESP32_ONLY == 1
-				  from_host_data.OutPPM_Min[0] = (((uint16_t)deck_pack.msg[1]<<8) + deck_pack.msg[2])/2.5; 
-				  from_host_data.OutPPM_Min[1] = (((uint16_t)deck_pack.msg[3]<<8) + deck_pack.msg[4])/2.5;
-				  from_host_data.OutPPM_Max[0] = (((uint16_t)deck_pack.msg[5]<<8) + deck_pack.msg[6])/2.5;
-				  from_host_data.OutPPM_Max[1] = (((uint16_t)deck_pack.msg[7]<<8) + deck_pack.msg[8])/2.5; 
-				  from_host_data.mode_360 = deck_pack.msg[10];
-				  from_host_data.mode = deck_pack.msg[9]; 
+					from_host_data.OutPPM_Min[0] = (((uint16_t)deck_pack.msg[1]<<8) + deck_pack.msg[2])/2.5; 
+					from_host_data.OutPPM_Min[1] = (((uint16_t)deck_pack.msg[3]<<8) + deck_pack.msg[4])/2.5;
+					from_host_data.OutPPM_Max[0] = (((uint16_t)deck_pack.msg[5]<<8) + deck_pack.msg[6])/2.5;
+					from_host_data.OutPPM_Max[1] = (((uint16_t)deck_pack.msg[7]<<8) + deck_pack.msg[8])/2.5; 
+					from_host_data.mode = deck_pack.msg[9];
+					from_host_data.mode_360 = deck_pack.msg[10];
+					
+					uint16_t tmp =  ((uint16_t)deck_pack.msg[11]<<8) + deck_pack.msg[12];
+					uint16_t maxAz = from_host_data.mode_360 ? 360 : 180;
+					uint16_t maxEl = from_host_data.mode_360 ? 90 : 180;
+					from_host_data.ang_min[0] = inRange(tmp, 0, maxAz) ? tmp : 0; //az
+					tmp = ((uint16_t)deck_pack.msg[13]<<8) + deck_pack.msg[14]; 
+				  	from_host_data.ang_min[1] = inRange(tmp, 0, maxEl) ? tmp : 0; //elev
+					tmp = ((uint16_t)deck_pack.msg[15]<<8) + deck_pack.msg[16];
+					from_host_data.ang_max[0] = inRange(tmp, 0, maxAz) ? tmp : maxAz; //az
+					tmp = ((uint16_t)deck_pack.msg[17]<<8) + deck_pack.msg[18];
+					from_host_data.ang_max[1] = inRange(tmp, 0, maxEl) ? tmp : maxEl; //elev
+					
+					
 #endif
 			}
 #if ESP32_ONLY == 1			

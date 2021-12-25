@@ -229,8 +229,10 @@ typedef struct
     uint8_t mode; 
     uint16_t AzimuthOffset; 
     uint8_t soundOn; 
-    uint8_t delay_change_ppm;      
-} __attribute__ ((packed)) FROM_HOST_DATA;  // 9 bytes
+    uint8_t delay_change_ppm;
+    uint16_t ang_min[2];
+    uint16_t ang_max[2];
+} __attribute__ ((packed)) FROM_HOST_DATA;  // 9 + 6 bytes
 
 // GS 2 HOST ADDITIONAL DATA STRUCT
 typedef struct

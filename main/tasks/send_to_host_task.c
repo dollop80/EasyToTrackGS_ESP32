@@ -46,6 +46,9 @@ extern bool gCoordsSaved;
 	extern uint8_t EEP_soundOn;
 	extern uint8_t EEP_delay_change_ppm;
 	extern uint16_t EEP_Off_azimuth;
+
+	extern uint16_t EEP_ang_min[];
+	extern uint16_t EEP_ang_max[];
 #endif
 extern int16_t gBThandle;
 extern int16_t gWFsock;
@@ -107,7 +110,7 @@ void send_to_host_task(void *pvParameters)
 			
 			
 			#if ESP32_ONLY == 1
-			uart_write_bytes(UART_NUM_0, (const char *) txbuf, len);
+			////uart_write_bytes(UART_NUM_0, (const char *) txbuf, len);
 			
 			if(g_servo_values_req){
 				g_servo_values_req = false;
@@ -120,6 +123,11 @@ void send_to_host_task(void *pvParameters)
 				from_host_data.AzimuthOffset = EEP_Off_azimuth;
 				from_host_data.soundOn = EEP_soundOn; 
 				from_host_data.delay_change_ppm = EEP_delay_change_ppm;
+
+				from_host_data.ang_min[1] = EEP_ang_min[1];
+				from_host_data.ang_max[1] = EEP_ang_max[1];
+				from_host_data.ang_min[0] = EEP_ang_min[0];
+				from_host_data.ang_max[0] = EEP_ang_max[0];
 				
 				len = packPacket(1, txbuf, (uint8_t *)&from_host_data, sizeof(FROM_HOST_DATA));
 

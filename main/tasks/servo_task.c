@@ -19,6 +19,8 @@
 #include "driver/mcpwm.h"
 #include "soc/mcpwm_periph.h"
 
+#include "driver/uart.h"
+
 //You can get these value from the datasheet of servo you use, in general pulse width varies between 1000 to 2000 mocrosecond
 #define SERVO_MIN_PULSEWIDTH 1000 //Minimum pulse width in microsecond
 #define SERVO_MAX_PULSEWIDTH 2000 //Maximum pulse width in microsecond
@@ -45,8 +47,6 @@ static const char TAG[] = "ETT-SERVO";
 
 CALIBR_DATA gCallibr;
 
-uint8_t mode_360_ram = 0;
-
 
 extern uint16_t gTelAzimuth;
 extern uint8_t gTelElevation;
@@ -66,8 +66,11 @@ uint8_t EEP_def_elevation;
 uint16_t EEP_RSSImax;
 uint16_t EEP_RSSImin;
 
-uint16_t gPPMOldVal[2];
-uint16_t gPPMOldMod[2];
+uint16_t EEP_ang_min[2];
+uint16_t EEP_ang_max[2];
+
+uint16_t gPPMOldVal[2] = {1000, 1000};
+uint16_t gPPMOldMod[2] = {0};
 
 
 
@@ -84,41 +87,52 @@ esp_err_t servo_save_config(){
 		
 	
 	esp_err = nvs_set_u16(handle, "off_az", EEP_Off_azimuth);
-	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 1"); return false;}
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 1"); return false;}
 	
 	esp_err = nvs_set_u16(handle, "az_min_lim", EEP_azimuth_min_limit);
-	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 2"); return false;}
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 2"); return false;}
 	
 	esp_err = nvs_set_u16(handle, "az_max_lim", EEP_azimuth_max_limit);
-	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 3"); return false;}
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 3"); return false;}
 	
 	esp_err = nvs_set_u16(handle, "el_min_lim", EEP_elevation_min_limit);
-	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 4"); return false;}
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 4"); return false;}
 	
 	esp_err = nvs_set_u16(handle, "el_max_lim", EEP_elevation_max_limit);
-	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 5"); return false;}
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 5"); return false;}
 	
 	esp_err = nvs_set_u8(handle, "mode360", EEP_mode360);
-	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 6"); return false;}
-	
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 6"); return false;}
+
 	esp_err = nvs_set_u8(handle, "sound_on", EEP_soundOn);
-	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 7"); return false;}		
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 7"); return false;}		
 	
 	esp_err = nvs_set_u8(handle, "delay_ch_ppm", EEP_delay_change_ppm);
-	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 8"); return false;}	
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 8"); return false;}	
 
 	esp_err = nvs_set_u16(handle, "def_az", EEP_def_azimuth);
-	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 9"); return false;}
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 9"); return false;}
 
 	esp_err = nvs_set_u8(handle, "def_el", EEP_def_elevation);
-	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 10"); return false;}		
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 10"); return false;}		
 
 	esp_err = nvs_set_u16(handle, "rssi_max", EEP_RSSImax);
-	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 11"); return false;}
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 11"); return false;}
 
 	esp_err = nvs_set_u16(handle, "rssi_min", EEP_RSSImin);
-	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 12"); return false;}			
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 12"); return false;}			
 	
+	esp_err = nvs_set_u16(handle, "ang_el_min", EEP_ang_min[1]);
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 13"); return false;}
+
+	esp_err = nvs_set_u16(handle, "ang_el_max", EEP_ang_max[1]);
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 14"); return false;}
+
+	esp_err = nvs_set_u16(handle, "ang_az_min", EEP_ang_min[0]);
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 15"); return false;}
+
+	esp_err = nvs_set_u16(handle, "ang_az_max", EEP_ang_max[0]);
+	if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Save servo config ERROR 16"); return false;}
 
 	esp_err = nvs_commit(handle);
 	if (esp_err != ESP_OK) {ESP_LOGI(TAG, "NVS commit ERROR"); return esp_err;}
@@ -176,7 +190,32 @@ bool servo_fetch_config(){
 		esp_err = nvs_get_u16(handle, "rssi_min", &EEP_RSSImin);
 		if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 12"); return false;}
 
+		esp_err = nvs_get_u16(handle, "ang_el_min", &EEP_ang_min[1]);
+		if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 13"); return false;}
+
+		esp_err = nvs_get_u16(handle, "ang_el_max", &EEP_ang_max[1]);
+		if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 14"); return false;}
+
+		esp_err = nvs_get_u16(handle, "ang_az_min", &EEP_ang_min[0]);
+		if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 15"); return false;}
+
+		esp_err = nvs_get_u16(handle, "ang_az_max", &EEP_ang_max[0]);
+		if(esp_err != ESP_OK) {ESP_LOGI(TAG, "Restore servo config ERROR 16"); return false;}
+
 		nvs_close(handle);
+
+		if(EEP_ang_min[0] == EEP_ang_max[0])
+		{
+			EEP_ang_min[0] = 0; 
+			EEP_ang_max[0] = EEP_mode360 ? 360 : 180;
+			return false;
+		}
+		if(EEP_ang_min[1] == EEP_ang_max[1])
+		{
+			EEP_ang_min[1] = 0;
+			EEP_ang_max[1] = EEP_mode360 ? 90 : 180;
+			return false;
+		}	
 
 		ESP_LOGI(TAG, "servo_config fetched");
 
@@ -195,6 +234,10 @@ bool servo_fetch_config(){
 }
 
 //-----------------------------------------------------
+int map(int x, int in_min, int in_max, int out_min, int out_max) {
+	return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+//-----------------------------------------------------
 
 static void set_ppm_out(uint8_t ch, uint16_t val)
 { 
@@ -209,28 +252,40 @@ static void set_ppm_out(uint8_t ch, uint16_t val)
 
 	//val=180-val; // Inverted!
 	y=(gCallibr.OutPPM_Max[ch]-gCallibr.OutPPM_Min[ch]);
-	ul=y; ul*=val;
+	int vals;
+	ul=y; 
+	//ul*=val;
 
- 	if(ch==0){
-	//val=360-val;   reverse
-		if(mode_360_ram){
-			new_val=(int16_t)(ul/360);
+ 	if (ch == 0) { //Azimuth
+		//val=360-val;   reverse
+		if (EEP_mode360) {
+			vals = map(val, EEP_ang_min[ch], EEP_ang_max[ch], 0, 360);
+			ul *= vals;
+			new_val = (int16_t)(ul / 360); //ul/360
 		}
-		else{ 
-			new_val=(int16_t)(ul/180);
+		else {
+			vals = map(val, EEP_ang_min[ch], EEP_ang_max[ch], 0, 180);
+			ul *= vals;
+			new_val = (int16_t)(ul / 180); //ul/180
 		}
-		
-		new_val+=gCallibr.OutPPM_Min[ch];
 	}
-	else{
+	else 
+	{ //Elevation
+		if (EEP_mode360) {
+			vals = map(val, EEP_ang_min[ch], EEP_ang_max[ch], 0, 90);
+			ul *= vals;
+			new_val = (int16_t)(ul / 90); //ul / 90 Режим 360 градусов весь ход сервы элевации - 90 градусов
+		}
+		else {
+			vals = map(val, EEP_ang_min[ch], EEP_ang_max[ch], 0, 180);
+			ul *= vals;
+			new_val = (int16_t)(ul / 180); //ul / 180 Режим 180 градусов весь ход сервы элевации - 180 градусов
+		}
+	}
 
-		if(mode_360_ram){
-			 new_val=(int16_t)(ul/90); // Режим 360 градусов весь ход сервы элевации - 90 градусов
-		}else{
-			 new_val=(int16_t)(ul/180); // Режим 180 градусов весь ход сервы элевации - 180 градусов
-		}   
-		new_val+=gCallibr.OutPPM_Min[ch];
-	}
+	new_val += gCallibr.OutPPM_Min[ch];
+	if (new_val > gCallibr.OutPPM_Max[ch]) new_val = gCallibr.OutPPM_Max[ch];
+	if (new_val < gCallibr.OutPPM_Min[ch]) new_val = gCallibr.OutPPM_Min[ch];
 
 	y=abs(y);
 	old_val=gPPMOldVal[ch];
@@ -248,6 +303,10 @@ static void set_ppm_out(uint8_t ch, uint16_t val)
 	if(ch==1) { mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, new_val); }
 	else      { mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_1, MCPWM_OPR_A, new_val); }
 
+	char txbuf[30];
+	int len = sprintf(txbuf, "ch=%d,Val=%d\r\n", ch, new_val);
+	uart_write_bytes(UART_NUM_0, (const char *) txbuf, len);
+
 }
 //----------------------------------------------------------------------
 static void CalcTrackPos(void)
@@ -255,7 +314,7 @@ static void CalcTrackPos(void)
 	uint16_t angle;
 	uint16_t Azimuth, Elevation;
 
-	if(mode_360_ram && gTelElevation > 90) gTelElevation = 90;  //correction when switched between 180/360 mode from application
+	if(EEP_mode360 && gTelElevation > 90) gTelElevation = 90;  //correction when switched between 180/360 mode from application
 	az_elev_data.Track_azimuth = gTelAzimuth;//gTrack_azimuth;
 	az_elev_data.Track_elevation = gTelElevation;//gTrack_elevation;
 
@@ -267,7 +326,7 @@ static void CalcTrackPos(void)
 		angle = angle % 360;
 	}
 
-	if((angle>180) && (!mode_360_ram))
+	if((angle>180) && (!EEP_mode360))
 	{
 	//Режим 180 градусов - "запрокидывание головы"
 	  Azimuth=(angle-180);
@@ -359,33 +418,11 @@ switch(from_host_data.mode)
         case 5:
             if(from_host_data.mode_360==0)
             {
-                mode_360_ram=0;
-                {
-					/*
-                    BUZ=1;
-                    delay_ms(50);
-                    BUZ=0;
-                    delay_ms(50);
-                    BUZ=1;
-                    delay_ms(50);
-                    BUZ=0;
-					*/
-                }
+                EEP_mode360=0;
             }
             else
             {
-                mode_360_ram=1;
-                {
-					/*
-                    BUZ=1;
-                    delay_ms(20);
-                    BUZ=0;
-                    delay_ms(50);
-                    BUZ=1;
-                    delay_ms(20);
-                    BUZ=0;
-					*/
-                }
+                EEP_mode360=1;
             }
    
         break;
@@ -395,28 +432,27 @@ switch(from_host_data.mode)
                 EEP_azimuth_max_limit = gCallibr.OutPPM_Max[0];
                 EEP_elevation_min_limit = gCallibr.OutPPM_Min[1];
                 EEP_elevation_max_limit = gCallibr.OutPPM_Max[1];
-                EEP_mode360 = mode_360_ram;    
+
+				EEP_ang_min[1] = from_host_data.ang_min[1];
+				EEP_ang_max[1] = from_host_data.ang_max[1];
+				EEP_ang_min[0] = from_host_data.ang_min[0];
+				EEP_ang_max[0] = from_host_data.ang_max[0];
+
+				if(EEP_ang_min[0] == EEP_ang_max[0])
+				{
+					EEP_ang_min[0] = 0; 
+					EEP_ang_max[0] = from_host_data.mode_360 ? 360 : 180;
+				}
+				if(EEP_ang_min[1] == EEP_ang_max[1])
+				{
+					EEP_ang_min[1] = 0;
+					EEP_ang_max[1] = from_host_data.mode_360 ? 90 : 180;
+				}				
+
+				char txbuf[50];
+				int len = sprintf(txbuf, "Emin=%d,Emax=%d,Amin=%d,Amax=%d\r\n", EEP_ang_min[1], EEP_ang_max[1], EEP_ang_min[0], EEP_ang_max[0]);
+				uart_write_bytes(UART_NUM_0, (const char *) txbuf, len);
 				servo_save_config();
-				
-                {
-					/*
-                    BUZ=1;
-                    delay_ms(30);
-                    BUZ=0;
-                    delay_ms(20);
-                    BUZ=1;
-                    delay_ms(30);
-                    BUZ=0;
-                    delay_ms(20);
-                    BUZ=1;
-                    delay_ms(30);
-                    BUZ=0;
-                    delay_ms(20);
-                    BUZ=1;
-                    delay_ms(70);
-                    BUZ=0;
-					*/					
-                }
 
         break;
          
@@ -483,6 +519,12 @@ switch(from_host_data.mode)
 		EEP_def_elevation = 0;
 		EEP_RSSImax = 10;
 		EEP_RSSImin = 0;		
+
+		EEP_ang_min[1] = 0;
+		EEP_ang_max[1] = 180;
+		EEP_ang_min[0] = 0;
+		EEP_ang_max[0] = 180;  
+
 		servo_save_config();
 	}
 	
@@ -500,7 +542,7 @@ switch(from_host_data.mode)
 	to_host_data.ID = 0;
 	to_host_data.InputMode = ESP32_ONLY_DEVICE_ID;
 
-	to_host_data.GS_Version = VERSION + 10;
+	to_host_data.GS_Version = VERSION + 11;
 }
 
 
@@ -531,7 +573,6 @@ void servo_task(void *pvParameter)
 		
 		if(settings_changed)
 		{
-			EEP_mode360 = mode_360_ram;    
 			settings_changed = false;
 			servo_save_config();
 		}
